@@ -121,6 +121,8 @@ See [DATA.MD](DATA.md) for detailed instructions on data download, preparation a
 | Scannet      | `[point, rgb, cad, referral]` | `[point, rgb, floorplan, referral]` |    ❌                       |          ✅                |
 | 3RScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ✅                       |          ✅                |
 | ARKitScenes       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
+| MultiScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
+
 
 > To run our demo, you only need to download generated embedding data; no need for any data preprocessing.
 
@@ -137,7 +139,7 @@ Various configurable parameters:
 - `--database_path`: Path to the precomputed embeddings of the database scenes downloaded before (eg: `./release_data/embed_scannet.pt`).
 - `--query_modality`: Modality of the query scene, Options: `point`, `rgb`, `floorplan`, `referral`
 - `--database_modality`: Modality used for retrieval. Same options as above.
-- `--ckpt`: Path to the pre-trained scene crossover model checkpoint (details [here](#checkpoints)), example_path: `./checkpoints/scene_crossover_scannet+scan3r.pth/`).
+- `--ckpt`: Path to the pre-trained scene crossover model checkpoint (details [here](#checkpoints)), example_path: `./checkpoints/scene_crossover_scannet+scan3r.pth/`.
 
 For embedding and pre-trained model download, refer to [generated embedding data](DATA.md#generated-embedding-data) and [checkpoints](#checkpoints) sections.
 

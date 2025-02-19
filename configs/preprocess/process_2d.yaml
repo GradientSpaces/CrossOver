@@ -33,6 +33,12 @@ data:
     processor3D    : ARKitScenes3DProcessor
     processor2D    : ARKitScenes2DProcessor
     processor1D    : ARKitScenes1DProcessor
+  MultiScan:
+    base_dir       : /media/sayan/Expansion/data/datasets/MultiScan
+    process_dir    : ${data.process_dir}/MultiScan
+    processor3D    : MultiScan3DProcessor
+    processor2D    : MultiScan2DProcessor
+    processor1D    : MultiScan1DProcessor
     skip_frames    : 1
     
 modality_info:

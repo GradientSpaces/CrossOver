@@ -53,13 +53,27 @@ data :
     max_object_len : 150
     voxel_size     : 0.02
     
+  MultiScan:
+    base_dir       : /media/sayan/Expansion/data/datasets/MultiScan
+    process_dir    : ${data.process_dir}/MultiScan
+    processor3D    : MultiScan3DProcessor
+    processor2D    : MultiScan2DProcessor
+    processor1D    : MultiScan1DProcessor
+    avail_modalities : ['point', 'cad', 'rgb', 'referral']
+    max_object_len : 150
+    voxel_size     : 0.02
+
 task: 
   name       : InferenceObjectRetrieval
   InferenceObjectRetrieval:
     val                     : [Scannet]
     modalities              : ['rgb', 'point', 'cad', 'referral']
     scene_modalities        : ['rgb', 'point', 'referral', 'floorplan']
+<<<<<<< HEAD
     ckpt_path               : /drive/dumps/multimodal-spaces/runs/release_runs/instance_crossover_scannet+scan3r+arkit.pth
+=======
+    ckpt_path               : /drive/dumps/multimodal-spaces/runs/release_runs/instance_crossover_scannet+scan3r+multiscan.pth
+>>>>>>> f86c782 (adding support for multiscan)
     
 
 inference_module: ObjectRetrieval

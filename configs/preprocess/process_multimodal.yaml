@@ -36,6 +36,15 @@ data:
     processor2D    : ARKitScenes2DProcessor
     processor1D    : ARKitScenes1DProcessor
     avail_modalities : ['point', 'rgb', 'referral']
+
+  MultiScan:
+    base_dir         : /media/sayan/Expansion/data/datasets/MultiScan
+    process_dir      : ${data.process_dir}/MultiScan/
+    chunked_dir      : ${data.process_dir}/MultiScan/objects_chunked
+    processor3D      : Scan3R3DProcessor
+    processor2D      : Scan3R2DProcessor
+    processor1D      : Scan3R1DProcessor
+    avail_modalities : ['point', 'rgb', 'referral']
     
 modality_info:
   1D  :

@@ -28,6 +28,8 @@ def run_inference(args, scan_id=None):
         dataset = datasets.Scan3RInferDataset(args.data_dir)
     elif args.dataset == 'ARKitScenes':
         dataset = datasets.ARKitScenesInferDataset(args.data_dir)
+    elif args.dataset == 'MultiScan':
+        dataset = datasets.MultiScanInferDataset(args.data_dir)
     else:
         raise NotImplementedError('Dataset not implemented')
     

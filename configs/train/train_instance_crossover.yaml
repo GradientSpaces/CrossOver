@@ -54,6 +54,16 @@ data :
     avail_modalities : ['point', 'rgb', 'referral']
     max_object_len : 150
     voxel_size     : 0.02
+  MultiScan:
+    base_dir       : /media/sayan/Expansion/data/datasets/Multiscan
+    process_dir    : ${data.process_dir}/MultiScan/
+    chunked_dir    : ${data.process_dir}/MultiScan/objects_chunked
+    processor3D    : MultiScan3DProcessor
+    processor2D    : MultiScan2DProcessor
+    processor1D    : MultiScan1DProcessor
+    avail_modalities : ['point', 'cad', 'rgb', 'referral']
+    max_object_len   : 150
+    voxel_size       : 0.02
     
 task: 
   name       : SceneLevelGrounding 

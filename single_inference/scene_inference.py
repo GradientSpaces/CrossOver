@@ -26,6 +26,8 @@ def run_inference(args, scan_id=None):
         dataset = datasets.ScannetInferDataset(args.data_dir, args.floorplan_dir)
     elif args.dataset == 'Scan3R':
         dataset = datasets.Scan3RInferDataset(args.data_dir)
+    elif args.dataset == 'ARKitScenes':
+        dataset = datasets.ARKitScenesInferDataset(args.data_dir)
     else:
         raise NotImplementedError('Dataset not implemented')
     

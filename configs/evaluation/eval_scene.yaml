@@ -43,13 +43,23 @@ data :
     max_object_len : 150
     voxel_size     : 0.02
 
+  ARKitScenes:
+    base_dir       : /Users/gauravpradeep/CrossOver_ScaleUp/ARKitScenes
+    process_dir    : ${data.process_dir}/ARKitScenes/scans
+    processor3D    : ARKitScenes3DProcessor
+    processor2D    : ARKitScenes2DProcessor
+    processor1D    : ARKitScenes1DProcessor
+    avail_modalities : ['point', 'cad', 'rgb', 'referral']
+    max_object_len : 150
+    voxel_size     : 0.02
+
 task: 
   name       : InferenceSceneRetrieval
   InferenceSceneRetrieval:
     val                     : [Scannet]
     modalities              : ['rgb', 'point', 'cad', 'referral']
     scene_modalities        : ['rgb', 'point', 'referral', 'floorplan'] #, 'point']
-    ckpt_path               : /drive/dumps/multimodal-spaces/runs/release_runs/scene_crossover_scannet+scan3r.pth
+    ckpt_path               : /drive/dumps/multimodal-spaces/runs/release_runs/scene_crossover_scannet+scan3r+arkit.pth
 
 inference_module: SceneRetrieval
 model: 

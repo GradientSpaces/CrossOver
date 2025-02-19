@@ -120,6 +120,7 @@ See [DATA.MD](DATA.md) for detailed instructions on data download, preparation a
 | ------------ | ----------------------------- | ----------------------------------- |  -------------------------- | -------------------------- |
 | Scannet      | `[point, rgb, cad, referral]` | `[point, rgb, floorplan, referral]` |    ❌                       |          ✅                |
 | 3RScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ✅                       |          ✅                |
+| ARKitScenes       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
 
 > To run our demo, you only need to download generated embedding data; no need for any data preprocessing.
 

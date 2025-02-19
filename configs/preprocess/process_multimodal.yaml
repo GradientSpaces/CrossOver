@@ -28,6 +28,15 @@ data:
     skip_frames      : 1
     avail_modalities : ['point', 'rgb', 'referral']
 
+  ARKitScenes:
+    base_dir       : /Users/gauravpradeep/CrossOver_ScaleUp/ARKitScenes
+    process_dir    : ${data.process_dir}/ARKitScenes/scans
+    chunked_dir    : ${data.process_dir}/ARKitScenes/objects_chunked
+    processor3D    : ARKitScenes3DProcessor
+    processor2D    : ARKitScenes2DProcessor
+    processor1D    : ARKitScenes1DProcessor
+    avail_modalities : ['point', 'rgb', 'referral']
+    
 modality_info:
   1D  :
     feature_extractor: 

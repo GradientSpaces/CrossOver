@@ -21,7 +21,7 @@ $ bash scripts/train/train_instance_crossover.sh
 ```
 
 #### Train Scene Retrieval Pipeline
-Adjust path/configuration parameters in `configs/train/train_scene_crossover.yaml`. You can also add your customised dataset or choose to train on Scannet & 3RScan or either. Run the following:
+Adjust path/configuration parameters in `configs/train/train_scene_crossover.yaml`. You can also add your customised dataset or choose to train on Scannet, 3RScan & ARKitScenes or any combination of the same. Run the following:
 
 ```bash
 $ bash scripts/train/train_scene_crossover.sh

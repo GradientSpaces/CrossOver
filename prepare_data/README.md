@@ -5,6 +5,7 @@
 This document provides instructions for pre-processing different datasets, including 
 - ScanNet
 - 3RScan
+- ARKitScenes
 
 ## Prerequisites
 
@@ -16,20 +17,14 @@ Before you begin, simply activate the `crossover` conda environment.
 #### Original Data
 - **ScanNet**: Download ScanNet v2 data from the [official website](https://github.com/ScanNet/ScanNet), we use the official training and validation split from [here](https://github.com/ScanNet/ScanNet/tree/master/Tasks/Benchmark).
 
-- **3RScan**: Download 3RScan dataset from the [official website](https://github.com/WaldJohannaU/3RScan), we use the official (full list of scan ids including reference + rescans) training split from [here](https://campar.in.tum.de/public_datasets/3RScan/train_scans.txt) and validation split from [here](https://campar.in.tum.de/public_datasets/3RScan/val_scans.txt).
-    - Download `3RScan.json` from [here](https://campar.in.tum.de/public_datasets/3RScan/3RScan.json) and `objects.json` from [here](https://campar.in.tum.de/public_datasets/3DSSG/3DSSG/objects.json).
-    - Download the class mapping file `3RScan.v2 Semantic Classes - Mapping.csv` from [here](https://docs.google.com/spreadsheets/d/1eRTJ2M9OHz7ypXfYD-KTR1AIT-CrVLmhJf8mxgVZWnI/edit?gid=0#gid=0).
+- **3RScan**: Download 3RScan dataset from the [official website](https://github.com/WaldJohannaU/3RScan).
+
+- **ARKitScenes**: Download ARKitScenes dataset from the [official website](https://github.com/apple/ARKitScenes).
 
 - **ShapeNet**: Download ShapenetCore dataset from the [official Huggingface release](https://huggingface.co/datasets/ShapeNet/ShapeNetCore) and unzip.
 
-#### Referral and CAD annotations
-We use [SceneVerse](https://scene-verse.github.io/) for instance referrals (ScanNet & 3RScan) and [Scan2CAD](https://github.com/skanti/Scan2CAD) for CAD annotations (ScanNet). 
-
-- **SceneVerse** - Download the Scannet and 3RScan data under `annotations/refer` from the [official website](https://scene-verse.github.io/).
-- **Scan2CAD** - Download `full_annotations.json` from the [official website](https://github.com/skanti/Scan2CAD?tab=readme-ov-file#download-dataset).
-
-### Prepare The Data
-Exact instructions for data setup + preparation below:
+### Download Referral and CAD annotations
+We use [SceneVerse](https://scene-verse.github.io/) for instance referrals (ScanNet, 3RScan, & ARKitScenes) and [Scan2CAD](https://github.com/skanti/Scan2CAD) for CAD annotations (ScanNet). Exact instructions for data setup below.
 
 #### ScanNet
 1. Run the following to extract ScanNet data 
@@ -104,6 +99,39 @@ Scan3R/
     ├── objects.json
     ├── train_scans.txt
     ├── val_scans.txt
+    └── sceneverse  
+        └── ssg_ref_rel2_template.json
+```
+
+#### ARKitScenes
+1. Download `files/` under `processed_data/meta_data/ARKitScenes/` from GDrive and place under `PATH_TO_ARKITSCENES/`.
+2. Download ARKitScenes 3dod data into ARKitScenes/scans and run the following to extract MultiScan data 
+ 
+ ```bash
+cd ARKitScenes
+mv 3dod/Training/* scans
+mv 3dod/Validation/* scans
+```
+
+Once completed, the data structure would look like the following:
+```
+MultiScan/
+├── scans/
+│   ├── 40753679/
+│   │   ├── 40753679_frames/ 
+│   │   │    ├── lowres_depth/ (folder containing depth images)
+│   │   │    ├── lowres_wide/ (folder containing rgb images)
+│   │   │    ├── lowres_wide_intrinsics/ (folder containing frame wise camera intrinsics)
+│   │   │    ├── lowres_wide.traj (camera trajectory)
+│   │   ├── 40753679_3dod_annotation.json
+│   │   ├── 40753679_3dod_mesh.ply
+|   └── 
+└── files
+    ├── scannetv2-labels.combined.tsv
+    ├── train_scans.txt
+    ├── val_scans.txt
+    ├── metadata.csv
+    ├── 3dod_train_val_splits.csv
     └── sceneverse  
         └── ssg_ref_rel2_template.json
 ```

@@ -44,6 +44,17 @@ data :
     max_object_len : 150
     voxel_size     : 0.02
 
+  ARKitScenes:
+    base_dir       : /Users/gauravpradeep/CrossOver_ScaleUp/ARKitScenes
+    process_dir    : ${data.process_dir}/ARKitScenes/scans
+    chunked_dir    : ${data.process_dir}/ARKitScenes/objects_chunked
+    processor3D    : ARKitScenes3DProcessor
+    processor2D    : ARKitScenes2DProcessor
+    processor1D    : ARKitScenes1DProcessor
+    avail_modalities : ['point', 'rgb', 'referral']
+    max_object_len : 150
+    voxel_size     : 0.02
+    
 task: 
   name       : ObjectLevelGrounding 
   ObjectLevelGrounding :

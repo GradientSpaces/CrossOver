@@ -149,8 +149,7 @@ ARKitScenes/
 ```
 
 #### MultiScan
-1. Download `files/` under `processed_data/meta_data/MultiScan/` from GDrive and place under `PATH_TO_MULTISCAN/`.
-2. Download MultiScan data into MultiScan/scenes and run the following to extract MultiScan data 
+1. Download MultiScan data into MultiScan/scenes and run the following to extract MultiScan data 
  
  ```bash
 cd MultiScan/scenes

@@ -634,8 +634,10 @@ def load_pose(scan_dir, frame_id):
         for entry in reader:
             if entry.get("frame_id") == frame_id:
                 transform = np.asarray(entry.get('transform'))
-                pose = np.reshape(transform, (4, 4), order='F')
-                aligned_pose = inv_transform @ pose #align camera poses
+                transform = np.reshape(transform, (4, 4), order='F')
+                transform = np.dot(transform, np.diag([1, -1, -1, 1]))
+                transform = transform / transform[3][3]
+                aligned_pose = inv_transform @ transform #align camera poses
                 return aligned_pose
 
     raise ValueError(f"Pose for frame_id {frame_id} not found in {pose_path}")

@@ -152,15 +152,10 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         # Extract Scene Image Features
         scene_images_pt = []
         scene_image_embeddings = []
-        sky_direction=self.metadata[self.metadata['video_id']==int(scan_id)]['sky_direction'].values[0]
-        
+        # sky_direction=self.metadata[self.metadata['video_id']==int(scan_id)]['sky_direction'].values[0]
             
         for frame_index in frame_idxs:
             image = Image.open(osp.join(color_path, f'{scan_id}_{frame_index}.png'))
-            if sky_direction=='Left':
-                image = image.transpose(Image.ROTATE_270)
-            elif sky_direction=='Right':
-                image = image.transpose(Image.ROTATE_90)
                 
             image = image.resize((self.model_image_size[1], self.model_image_size[0]), Image.BICUBIC)
             image_pt = self.model.base_tf(image)
@@ -186,7 +181,7 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         pose_data = np.array(pose_data)
         
         sampled_frame_idxs = image_util.sample_camera_pos_on_grid(pose_data)
-        sky_direction=self.metadata[self.metadata['video_id']==int(scan_id)]['sky_direction'].values[0]
+        # sky_direction=self.metadata[self.metadata['video_id']==int(scan_id)]['sky_direction'].values[0]
         
         # Extract Scene Image Features
         scene_images_pt = []
@@ -194,10 +189,6 @@ class ARKitScenes2DProcessor(Base2DProcessor):
             frame_index = frame_idxs[idx]
             
             image = Image.open(osp.join(color_path, f'{scan_id}_{frame_index}.png'))
-            if sky_direction=='Left':
-                image = image.transpose(Image.ROTATE_270)
-            elif sky_direction=='Right':
-                image = image.transpose(Image.ROTATE_90)
             image = image.resize((self.model_image_size[1], self.model_image_size[0]), Image.BICUBIC)
             image_pt = self.model.base_tf(image)
             scene_images_pt.append(image_pt)
@@ -262,14 +253,6 @@ class ARKitScenes2DProcessor(Base2DProcessor):
     def computeImageFeaturesEachObject(self, scan_id, image: Image.Image, object_id: int, object_anno_2d: np.ndarray) -> np.ndarray:
         object_anno_2d = object_anno_2d.transpose(1, 0)
         object_anno_2d = np.flip(object_anno_2d, 1)
-        
-        sky_direction=self.metadata[self.metadata['video_id']==int(scan_id)]['sky_direction'].values[0]
-        
-        # load image
-        if sky_direction=='Left':
-            image = image.transpose(Image.ROTATE_270)
-        elif sky_direction=='Right':
-            image = image.transpose(Image.ROTATE_90)
         
         object_mask = object_anno_2d == object_id
         

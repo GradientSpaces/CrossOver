@@ -104,18 +104,18 @@ Scan3R/
 ```
 
 #### ARKitScenes
-1. Download `files/` under `processed_data/meta_data/ARKitScenes/` from GDrive and place under `PATH_TO_ARKITSCENES/`.
-2. Download ARKitScenes 3dod data into ARKitScenes/scans and run the following to extract MultiScan data 
+1. Download ARKitScenes 3dod data into ARKitScenes/scans and run the following to extract the data 
  
  ```bash
 cd ARKitScenes
 mv 3dod/Training/* scans
 mv 3dod/Validation/* scans
 ```
+2. Move the relevant files from `Sceneverse` and `ARKitScenes` under `files/`.
 
 Once completed, the data structure would look like the following:
 ```
-MultiScan/
+ARKitScenes/
 ├── scans/
 │   ├── 40753679/
 │   │   ├── 40753679_frames/ 

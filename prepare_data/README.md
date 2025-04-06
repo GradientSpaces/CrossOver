@@ -104,14 +104,22 @@ Scan3R/
 ```
 
 #### ARKitScenes
-1. Download ARKitScenes 3dod data into ARKitScenes/scans and run the following to extract the data 
+1. Download ARKitScenes 3dod data using the following command:
+
+```bash
+python ARKitScenes/download_data.py 3dod --video_id_csv PATH_TO_3dod_train_val_splits.csv --download_dir PATH_TO_ARKITSCENES
+```
+The files mentioned in the above command - ```download_data.py``` and ```3dod_train_val_splits.csv``` can be found in the official repository [here](https://github.com/apple/ARKitScenes), along with more detailed instructions and descriptions of the data.
+
+2. Once the data is downloaded, run the following to organize it as per our requirements.
  
  ```bash
 cd ARKitScenes
 mv 3dod/Training/* scans
 mv 3dod/Validation/* scans
 ```
-2. Move the relevant files from `Sceneverse` and `ARKitScenes` under `files/`.
+
+3. Move the relevant files from `Sceneverse` and `ARKitScenes` under `files/`.
 
 Once completed, the data structure would look like the following:
 ```

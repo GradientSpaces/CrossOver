@@ -95,4 +95,3 @@ class ARKitScenes3DProcessor(Base3DProcessor):
             
         torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
         torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
-    

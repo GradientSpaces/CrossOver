@@ -59,8 +59,8 @@ task:
   name       : SceneLevelGrounding 
   SceneLevelGrounding :
     modalities  : ['rgb', 'point', 'cad', 'referral']
-    train       : [Scannet, Scan3R]
-    val         : [Scannet, Scan3R]
+    train       : [Scannet, Scan3R, ARKitScenes]
+    val         : [Scannet, Scan3R, ARKitScenes]
 
 trainer: GroundingTrainer
 

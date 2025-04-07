@@ -60,8 +60,8 @@ task:
   UnifiedTrain :
     modalities       : ['rgb', 'point', 'cad', 'referral']
     scene_modalities : ['rgb', 'point', 'floorplan', 'referral']
-    train            : [Scannet, Scan3R, MultiScan]
-    val              : [Scannet, Scan3R, MultiScan]
+    train            : [Scannet, Scan3R, ARKitScenes]
+    val              : [Scannet, Scan3R, ARKitScenes]
     object_enc_ckpt  : /drive/dumps/multimodal-spaces/runs/release_runs/instance_crossover_scannet+scan3r+multiscan.pth
     
 trainer: UnifiedTrainer

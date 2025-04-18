@@ -26,8 +26,8 @@ data:
     skip_frames    : 1
 
   ARKitScenes:
-    base_dir       : /media/sayan/Expansion/data/datasets/ArkitScenes
-    process_dir    : ${data.process_dir}/ARKitScenes/scans
+    base_dir       : /media/sayan/Expansion/data/datasets/ARKitScenes
+    process_dir    : ${data.process_dir}/ARKitScenes/
     processor3D    : ARKitScenes3DProcessor
     processor2D    : ARKitScenes2DProcessor
     processor1D    : ARKitScenes1DProcessor

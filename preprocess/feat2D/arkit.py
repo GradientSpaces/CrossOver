@@ -29,7 +29,7 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         self.split = split
         self.scan_ids = arkit.get_scan_ids(files_dir, self.split)
         
-        self.out_dir = config_data.process_dir
+        self.out_dir = osp.join(config_data.process_dir, 'scans')
         load_utils.ensure_dir(self.out_dir)
         
         self.orig_image_size = config_2D.image.orig_size
@@ -51,10 +51,14 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         for scan_id in tqdm(self.scan_ids):
             self.compute2DImagesAndSeg(scan_id)
             self.compute2DFeaturesEachScan(scan_id)   
-            if self.split == 'val':
-                self.computeAllImageFeaturesEachScan(scan_id)
+            # if self.split == 'val':
+            #     self.computeAllImageFeaturesEachScan(scan_id)
     
     def compute2DImagesAndSeg(self, scan_id: str) -> None:
+        scene_folder = osp.join(self.data_dir, 'scans', scan_id)
+        if osp.exists(osp.join(scene_folder, 'gt-projection-seg.pt')):
+            return
+        
         objects_path = osp.join(self.data_dir, 'scans', scan_id, f"{scan_id}_3dod_annotation.json")
         if not osp.exists(objects_path):
             raise FileNotFoundError(f"Annotations file not found for scan ID: {scan_id}")
@@ -103,6 +107,9 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
+        
+        if osp.exists(osp.join(scene_out_dir, 'data2D.pt')):
+            return
         
         obj_id_to_label_id_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']
         

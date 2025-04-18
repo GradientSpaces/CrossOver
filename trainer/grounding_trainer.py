@@ -1,5 +1,7 @@
+import os.path as osp
 from tqdm import tqdm
 from omegaconf import DictConfig
+from safetensors.torch import load_file
 
 import torch
 from trainer.build import TRAINER_REGISTRY

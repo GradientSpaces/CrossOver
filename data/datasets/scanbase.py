@@ -187,7 +187,6 @@ class ScanBase(Dataset):
         
         rgb_embedding = torch.from_numpy(scandata_2d['scene']['scene_embeddings'])
         rgb_embedding = torch.concatenate([rgb_embedding[:, 0, :], rgb_embedding[:, 1:, :].mean(dim=1)], dim=1)
-        rgb_embedding = rgb_embedding[list(range(0, rgb_embedding.shape[0], 2)), :]
         scene_dict['rgb_embedding'] = rgb_embedding
         
         scene_dict['scene_masks']['rgb'] = torch.Tensor([1.0])

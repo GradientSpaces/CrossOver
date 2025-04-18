@@ -44,11 +44,14 @@ data :
     voxel_size     : 0.02
 
   ARKitScenes:
-    base_dir       : /Users/gauravpradeep/CrossOver_ScaleUp/ARKitScenes
-    process_dir    : ${data.process_dir}/ARKitScenes/scans
+    base_dir       : /media/sayan/Expansion/data/datasets/ARKitScenes
+    process_dir    : ${data.process_dir}/ARKitScenes/
     processor3D    : ARKitScenes3DProcessor
     processor2D    : ARKitScenes2DProcessor
     processor1D    : ARKitScenes1DProcessor
+    max_object_len : 150
+    voxel_size     : 0.02
+    avail_modalities : ['point', 'cad', 'rgb', 'referral']
   MultiScan:
     base_dir       : /media/sayan/Expansion/data/datasets/MultiScan
     process_dir    : ${data.process_dir}/MultiScan
@@ -65,11 +68,7 @@ task:
     val                     : [Scannet]
     modalities              : ['rgb', 'point', 'cad', 'referral']
     scene_modalities        : ['rgb', 'point', 'referral', 'floorplan'] #, 'point']
-<<<<<<< HEAD
-    ckpt_path               : /drive/dumps/multimodal-spaces/runs/release_runs/scene_crossover_scannet+scan3r+arkit.pth
-=======
     ckpt_path               : /drive/dumps/multimodal-spaces/runs/release_runs/scene_crossover_scannet+scan3r+multiscan.pth
->>>>>>> f86c782 (adding support for multiscan)
 
 inference_module: SceneRetrieval
 model: 

@@ -8,11 +8,7 @@ from omegaconf import DictConfig
 import h5py
 from common import load_utils 
 from common.constants import ModalityType
-<<<<<<< HEAD
-from util import scan3r, scannet, arkit
-=======
-from util import scan3r, scannet, multiscan
->>>>>>> f86c782 (adding support for multiscan)
+from util import scan3r, scannet, arkit, multiscan
 from typing import Dict, Optional
 
 from preprocess.build import PROCESSOR_REGISTRY

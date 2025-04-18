@@ -21,7 +21,7 @@ class ARKitScenes3DProcessor(Base3DProcessor):
         self.scan_ids = []
         self.scan_ids = arkit.get_scan_ids(files_dir, split)
         
-        self.out_dir = config_data.process_dir
+        self.out_dir = osp.join(config_data.process_dir, 'scans')
         load_utils.ensure_dir(self.out_dir)
         self.label_map = arkit.read_label_map(files_dir, label_from = 'raw_category', label_to = 'nyu40id')
         

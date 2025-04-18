@@ -20,7 +20,7 @@ class ARKitScenes1DProcessor(Base1DProcessor):
         self.scan_ids = []
         self.scan_ids = arkit.get_scan_ids(files_dir, split)
         
-        self.out_dir = config_data.process_dir
+        self.out_dir = osp.join(config_data.process_dir, 'scans')
         load_utils.ensure_dir(self.out_dir)        
         # Object Referrals
         self.object_referrals = load_utils.load_json(osp.join(files_dir, 'sceneverse/ssg_ref_rel2_template.json'))

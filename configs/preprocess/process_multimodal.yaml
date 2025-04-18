@@ -29,8 +29,8 @@ data:
     avail_modalities : ['point', 'rgb', 'referral']
 
   ARKitScenes:
-    base_dir       : /media/sayan/Expansion/data/datasets/ArkitScenes
-    process_dir    : ${data.process_dir}/ARKitScenes/scans
+    base_dir       : /media/sayan/Expansion/data/datasets/ARKitScenes
+    process_dir    : ${data.process_dir}/ARKitScenes/
     chunked_dir    : ${data.process_dir}/ARKitScenes/objects_chunked
     processor3D    : ARKitScenes3DProcessor
     processor2D    : ARKitScenes2DProcessor

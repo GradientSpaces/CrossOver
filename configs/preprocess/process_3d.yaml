@@ -30,6 +30,7 @@ data:
     processor3D    : ARKitScenes3DProcessor
     processor2D    : ARKitScenes2DProcessor
     processor1D    : ARKitScenes1DProcessor
+
   MultiScan:
     base_dir       : /media/sayan/internal/datasets/MultiScan
     process_dir    : ${data.process_dir}/MultiScan
@@ -38,6 +39,13 @@ data:
     processor1D    : MultiScan1DProcessor
     skip_frames    : 1
     
+    Structured3D:
+    base_dir       : /Users/gauravpradeep/CrossOver_ScaleUp/Structured3D/
+    process_dir    : ${data.process_dir}/Structured3D/scans
+    processor3D    : Structured3D_3DProcessor
+    processor2D    : Structured3D_2DProcessor
+    processor1D    : Structured3D_1DProcessor
+
 modality_info:
   1D  :
     feature_extractor: 

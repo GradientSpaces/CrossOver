@@ -46,6 +46,15 @@ data:
     processor1D      : Scan3R1DProcessor
     avail_modalities : ['point', 'rgb', 'referral']
     
+    Structured3D:
+    base_dir       : /Users/gauravpradeep/CrossOver_ScaleUp/Structured3D
+    process_dir    : ${data.process_dir}/Structured3D/scans
+    chunked_dir    : ${data.process_dir}/Structured3D/objects_chunked
+    processor3D    : Structured3D_3DProcessor
+    processor2D    : Structured3D_2DProcessor
+    processor1D    : Structured3D_1DProcessor
+    avail_modalities : ['point', 'rgb', 'referral']
+    
 modality_info:
   1D  :
     feature_extractor: 

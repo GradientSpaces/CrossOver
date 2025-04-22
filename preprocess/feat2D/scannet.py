@@ -3,7 +3,7 @@ import open3d as o3d
 import numpy as np
 import torch
 from tqdm import tqdm
-
+import os
 import imageio
 import skimage.transform as sktf
 from PIL import Image
@@ -81,49 +81,57 @@ class Scannet2DProcessor(Base2DProcessor):
         return render_img
          
     def compute2DFeaturesEachScan(self, scan_id: str) -> None:
+        data2D = {}
         frame_idxs = list(self.frame_pose_data[scan_id].keys())
         scene_folder = osp.join(self.data_dir, 'scans', scan_id)
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
-        
-        # Floor-plan rendering
-        render_img = self.renderShapeAndFloorplan(scene_folder, scene_out_dir, scan_id)
-        floorplan_embeddings = None
-        
-        if render_img is not None:
-            render_img = render_img.resize((self.model_image_size[1], self.model_image_size[0]), Image.BICUBIC)
-            render_img_pt = self.model.base_tf(render_img)
-            floorplan_embeddings = self.extractFeatures([render_img_pt], return_only_cls_mean = False)            
-        
-        floorplan_dict = {'img' : render_img, 'embedding' : floorplan_embeddings}
+        pt_2d_path = osp.join(scene_out_dir, 'data2D.pt')
+        if osp.exists(pt_2d_path):
+            print("using 2d pt")
+            pt_data=torch.load(pt_2d_path)
+            data2D['objects']=pt_data['objects']
+            data2D['scene']=pt_data['scene']
+            os.remove(pt_2d_path)
             
-        # Multi-view Image -- Object (Embeddings)
-        object_image_embeddings, object_image_votes_topK = self.computeImageFeaturesAllObjectsEachScan(scene_folder, scene_out_dir, frame_idxs)
-    
-        # Multi-view Image -- Scene (Images + Embeddings)
-        color_path = osp.join(scene_folder, 'data/color')
-        intrinsic_data = scannet.load_intrinsics(osp.join(self.data_dir, 'scans'), scan_id)
-    
-        pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs = self.computeImageFeaturesEachScan(scan_id, color_path, frame_idxs)
-    
-        # Visualise
-        scene_mesh = o3d.io.read_triangle_mesh(osp.join(scene_folder, scan_id + '_vh_clean_2.ply'))
-        intrinsics = { 'f' : intrinsic_data['intrinsic_mat'][0, 0], 'cx' : intrinsic_data['intrinsic_mat'][0, 2], 'cy' : intrinsic_data['intrinsic_mat'][1, 2], 
-                        'w' : int(intrinsic_data['width']), 'h' : int(intrinsic_data['height'])}
+        else:
+        # Floor-plan rendering
+            render_img = self.renderShapeAndFloorplan(scene_folder, scene_out_dir, scan_id)
+            floorplan_embeddings = None
+            
+            if render_img is not None:
+                render_img = render_img.resize((self.model_image_size[1], self.model_image_size[0]), Image.BICUBIC)
+                render_img_pt = self.model.base_tf(render_img)
+                floorplan_embeddings = self.extractFeatures([render_img_pt], return_only_cls_mean = False)            
+            floorplan_dict = {'img' : render_img, 'embedding' : floorplan_embeddings}
+                
+            # Multi-view Image -- Object (Embeddings)
+            object_image_embeddings, object_image_votes_topK = self.computeImageFeaturesAllObjectsEachScan(scene_folder, frame_idxs)
         
-        cams_visualised_on_mesh = visualisation.visualise_camera_on_mesh(scene_mesh, pose_data[sampled_frame_idxs], intrinsics, stride=1)
+            # Multi-view Image -- Scene (Images + Embeddings)
+            color_path = osp.join(scene_folder, 'data/color')
+            intrinsic_data = scannet.load_intrinsics(osp.join(self.data_dir, 'scans'), scan_id)
         
-        image_path = osp.join(scene_out_dir, 'sel_cams_on_mesh.png')
-        Image.fromarray((cams_visualised_on_mesh * 255).astype(np.uint8)).save(image_path)
+            pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs = self.computeImageFeaturesEachScan(scan_id, color_path, frame_idxs)
         
-        data2D = {}
-        data2D['objects'] = {'image_embeddings': object_image_embeddings, 'topK_images_votes' : object_image_votes_topK}
-        data2D['scene']   = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
-                                'frame_idxs' : frame_idxs, 'sampled_cam_idxs' : sampled_frame_idxs}
-        
-        data2D['scene']['floorplan'] = floorplan_dict
-        torch.save(data2D, osp.join(scene_out_dir, 'data2D.pt'))
+            # Visualise
+            scene_mesh = o3d.io.read_triangle_mesh(osp.join(scene_folder, scan_id + '_vh_clean_2.ply'))
+            intrinsics = { 'f' : intrinsic_data['intrinsic_mat'][0, 0], 'cx' : intrinsic_data['intrinsic_mat'][0, 2], 'cy' : intrinsic_data['intrinsic_mat'][1, 2], 
+                            'w' : int(intrinsic_data['width']), 'h' : int(intrinsic_data['height'])}
+            
+            cams_visualised_on_mesh = visualisation.visualise_camera_on_mesh(scene_mesh, pose_data[sampled_frame_idxs], intrinsics, stride=1)
+            
+            image_path = osp.join(scene_out_dir, 'sel_cams_on_mesh.png')
+            Image.fromarray((cams_visualised_on_mesh * 255).astype(np.uint8)).save(image_path)
+            
+            data2D['objects'] = {'image_embeddings': object_image_embeddings, 'topK_images_votes' : object_image_votes_topK}
+            data2D['scene']   = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
+                                    'frame_idxs' : frame_idxs, 'sampled_cam_idxs' : sampled_frame_idxs}
+            
+            data2D['scene']['floorplan'] = floorplan_dict
+        # torch.save(data2D, osp.join(scene_out_dir, 'data2D.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data2D.npz'), **data2D)
     
     def computeImageFeaturesEachScan(self, scan_id: str, color_path: str, frame_idxs: List[int]) -> Tuple[np.ndarray, List[torch.tensor], np.ndarray, List[int]]:
         # Sample Camera Indexes Based on Rotation Matrix From Grid

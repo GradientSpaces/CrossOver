@@ -12,7 +12,7 @@ import pandas as pd
 from common import load_utils
 from util import render, arkit, visualisation
 from util import image as image_util
-
+import os
 
 from preprocess.build import PROCESSOR_REGISTRY
 from preprocess.feat2D.base import Base2DProcessor
@@ -56,95 +56,108 @@ class ARKitScenes2DProcessor(Base2DProcessor):
     
     def compute2DImagesAndSeg(self, scan_id: str) -> None:
         scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-        if osp.exists(osp.join(scene_folder, 'gt-projection-seg.pt')):
-            return
-        
-        objects_path = osp.join(self.data_dir, 'scans', scan_id, f"{scan_id}_3dod_annotation.json")
-        if not osp.exists(objects_path):
-            raise FileNotFoundError(f"Annotations file not found for scan ID: {scan_id}")
-        
-        annotations = load_utils.load_json(objects_path)        
-        ply_data = arkit.load_ply_data(osp.join(self.data_dir,'scans'), scan_id, annotations)
-        instance_ids = ply_data['objectId']
-        
-        mesh_file = osp.join(self.data_dir, 'scans', scan_id, f'{scan_id}_3dod_mesh.ply')
-        mesh = o3d.io.read_triangle_mesh(mesh_file)
-        mesh_triangles = np.asarray(mesh.triangles)
-        colors = np.asarray(mesh.vertex_colors)*255.0
-        colors = colors.round()
-        num_triangles = mesh_triangles.shape[0]
-        
-        scene = o3d.t.geometry.RaycastingScene()
-        scene.add_triangles(o3d.t.geometry.TriangleMesh.from_legacy(mesh))
-         
-        # project 3D model
         obj_id_imgs = {}
-        obj_id_imgs = {}
-        for frame_idx in self.frame_pose_data[scan_id].keys():
-            camera_info = arkit.load_intrinsics(osp.join(self.data_dir,'scans'),scan_id,frame_idx)
-            intrinsics = camera_info['intrinsic_mat']
-            img_width = int(camera_info['width'])
-            img_height = int(camera_info['height'])
-            img_pose = self.frame_pose_data[scan_id][frame_idx]
-            img_pose_inv = np.linalg.inv(img_pose)
+        
+        gt_pt_path = osp.join(scene_folder, 'gt-projection-seg.pt')
+        if osp.exists(gt_pt_path):
+            # print("using gt pt")
+            old_gt = torch.load(gt_pt_path)
+            for frame_idx in self.frame_pose_data[scan_id]:
+                obj_id_imgs[frame_idx] = old_gt[frame_idx]
+            os.remove(gt_pt_path)
             
-            obj_id_map = render.project_mesh3DTo2D_with_objectseg(
-                scene, intrinsics, img_pose_inv, img_width, img_height, 
-                mesh_triangles, num_triangles, instance_ids
-            )
-            obj_id_imgs[frame_idx] = obj_id_map
+            
+        else:
+            objects_path = osp.join(self.data_dir, 'scans', scan_id, f"{scan_id}_3dod_annotation.json")
+            if not osp.exists(objects_path):
+                raise FileNotFoundError(f"Annotations file not found for scan ID: {scan_id}")
+            
+            annotations = load_utils.load_json(objects_path)        
+            ply_data = arkit.load_ply_data(osp.join(self.data_dir,'scans'), scan_id, annotations)
+            instance_ids = ply_data['objectId']
+            
+            mesh_file = osp.join(self.data_dir, 'scans', scan_id, f'{scan_id}_3dod_mesh.ply')
+            mesh = o3d.io.read_triangle_mesh(mesh_file)
+            mesh_triangles = np.asarray(mesh.triangles)
+            colors = np.asarray(mesh.vertex_colors)*255.0
+            colors = colors.round()
+            num_triangles = mesh_triangles.shape[0]
+            
+            scene = o3d.t.geometry.RaycastingScene()
+            scene.add_triangles(o3d.t.geometry.TriangleMesh.from_legacy(mesh))
+            
+            # project 3D model
+            for frame_idx in self.frame_pose_data[scan_id].keys():
+                camera_info = arkit.load_intrinsics(osp.join(self.data_dir,'scans'),scan_id,frame_idx)
+                intrinsics = camera_info['intrinsic_mat']
+                img_width = int(camera_info['width'])
+                img_height = int(camera_info['height'])
+                img_pose = self.frame_pose_data[scan_id][frame_idx]
+                img_pose_inv = np.linalg.inv(img_pose)
+                
+                obj_id_map = render.project_mesh3DTo2D_with_objectseg(
+                    scene, intrinsics, img_pose_inv, img_width, img_height, 
+                    mesh_triangles, num_triangles, instance_ids
+                )
+                obj_id_imgs[frame_idx] = obj_id_map
 
-        scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-        if osp.exists(osp.join(scene_folder, 'gt-projection')):
-            shutil.rmtree(osp.join(scene_folder, 'gt-projection'))
     
         # save scene-level file for efficient loading
-        torch.save(obj_id_imgs, osp.join(scene_folder, 'gt-projection-seg.pt'))
+        # torch.save(obj_id_imgs, osp.join(scene_folder, 'gt-projection-seg.pt'))
+        np.savez_compressed(osp.join(scene_folder,'gt-projection-seg.npz'),**obj_id_imgs)
     
     def compute2DFeaturesEachScan(self, scan_id: str) -> None:
+        data2D = {}
+        
         scene_folder = osp.join(self.data_dir, 'scans', scan_id)
         color_path = osp.join(scene_folder,f'{scan_id}_frames', 'lowres_wide')
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
-        
-        if osp.exists(osp.join(scene_out_dir, 'data2D.pt')):
-            return
-        
-        obj_id_to_label_id_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']
-        
-        # Multi-view Image -- Object (Embeddings)
-        object_image_embeddings, object_image_votes_topK, frame_idxs = self.computeImageFeaturesAllObjectsEachScan(scene_folder, scene_out_dir, obj_id_to_label_id_map)
-        
-        # Multi-view Image -- Scene (Images + Embeddings)
-        frame_idxs = list(self.frame_pose_data[scan_id].keys())
-        pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs = self.computeSelectedImageFeaturesEachScan(scan_id, color_path, frame_idxs)
-        
-        # Visualise
-        for frame_idx in self.frame_pose_data[scan_id].keys():
-            camera_info = arkit.load_intrinsics(osp.join(self.data_dir,'scans'),scan_id,frame_idx)
-            intrinsic_mat = camera_info['intrinsic_mat']
-            break
+        pt_2d_path = osp.join(scene_out_dir, 'data2D.pt')
+        if osp.exists(pt_2d_path):
+            print("using 2d pt")
+            pt_data=torch.load(pt_2d_path)
+            data2D['objects']=pt_data['objects']
+            data2D['scene']=pt_data['scene']
+            os.remove(pt_2d_path)
             
+        else:
+        # obj_id_to_label_id_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']
+            obj_id_to_label_id_map = np.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)['obj_id_to_label_id_map'].item()
+            
+            # Multi-view Image -- Object (Embeddings)
+            object_image_embeddings, object_image_votes_topK, frame_idxs = self.computeImageFeaturesAllObjectsEachScan(scene_folder, scene_out_dir, obj_id_to_label_id_map)
+            
+            # Multi-view Image -- Scene (Images + Embeddings)
+            frame_idxs = list(self.frame_pose_data[scan_id].keys())
+            pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs = self.computeSelectedImageFeaturesEachScan(scan_id, color_path, frame_idxs)
+            
+            # Visualise
+            for frame_idx in self.frame_pose_data[scan_id].keys():
+                camera_info = arkit.load_intrinsics(osp.join(self.data_dir,'scans'),scan_id,frame_idx)
+                intrinsic_mat = camera_info['intrinsic_mat']
+                break
+                
+            
+            scene_mesh = o3d.io.read_triangle_mesh(osp.join(scene_folder, f'{scan_id}_3dod_mesh.ply'))
+            intrinsics = { 'f' : intrinsic_mat[0, 0], 'cx' : intrinsic_mat[0, 2], 'cy' : intrinsic_mat[1, 2], 
+                            'w' : int(camera_info['width']), 'h' : int(camera_info['height'])}
+            
+            cams_visualised_on_mesh = visualisation.visualise_camera_on_mesh(scene_mesh, pose_data[sampled_frame_idxs], intrinsics, stride=1)
+            image_path = osp.join(scene_out_dir, 'sel_cams_on_mesh.png')
+            Image.fromarray((cams_visualised_on_mesh * 255).astype(np.uint8)).save(image_path)
+            
+            data2D['objects'] = {'image_embeddings': object_image_embeddings, 'topK_images_votes' : object_image_votes_topK}
+            data2D['scene']   = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
+                                    'frame_idxs' : frame_idxs, 'sampled_cam_idxs' : sampled_frame_idxs}
+            
+            # dummy floorplan
+            floorplan_dict = {'img' : None, 'embedding' : None}
+            data2D['scene']['floorplan'] = floorplan_dict
         
-        scene_mesh = o3d.io.read_triangle_mesh(osp.join(scene_folder, f'{scan_id}_3dod_mesh.ply'))
-        intrinsics = { 'f' : intrinsic_mat[0, 0], 'cx' : intrinsic_mat[0, 2], 'cy' : intrinsic_mat[1, 2], 
-                        'w' : int(camera_info['width']), 'h' : int(camera_info['height'])}
-        
-        cams_visualised_on_mesh = visualisation.visualise_camera_on_mesh(scene_mesh, pose_data[sampled_frame_idxs], intrinsics, stride=1)
-        image_path = osp.join(scene_out_dir, 'sel_cams_on_mesh.png')
-        Image.fromarray((cams_visualised_on_mesh * 255).astype(np.uint8)).save(image_path)
-        
-        data2D = {}
-        data2D['objects'] = {'image_embeddings': object_image_embeddings, 'topK_images_votes' : object_image_votes_topK}
-        data2D['scene']   = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
-                                'frame_idxs' : frame_idxs, 'sampled_cam_idxs' : sampled_frame_idxs}
-        
-        # dummy floorplan
-        floorplan_dict = {'img' : None, 'embedding' : None}
-        data2D['scene']['floorplan'] = floorplan_dict
-        
-        torch.save(data2D, osp.join(scene_out_dir, 'data2D.pt'))
+        # torch.save(data2D, osp.join(scene_out_dir, 'data2D.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data2D.npz'), **data2D)
     
     def computeAllImageFeaturesEachScan(self, scan_id: str) -> None:
         scene_folder = osp.join(self.data_dir, 'scans', scan_id)
@@ -174,7 +187,8 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         data2D = {} 
         data2D['scene'] = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
                            'frame_idxs' : frame_idxs}
-        torch.save(data2D, osp.join(scene_out_dir, 'data2D_all_images.pt'))
+        # torch.save(data2D, osp.join(scene_out_dir, 'data2D_all_images.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data2D_all_images.npz'), **data2D)
     
     def computeSelectedImageFeaturesEachScan(self, scan_id: str, color_path: str, frame_idxs: List[int]) -> Tuple[np.ndarray, List[torch.tensor], np.ndarray, List[int]]:
         # Sample Camera Indexes Based on Rotation Matrix From Grid
@@ -207,7 +221,8 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         
     
     def computeImageFeaturesAllObjectsEachScan(self, scene_folder: str, scene_out_dir: str, obj_id_to_label_id_map: dict) -> Tuple[Dict[int, Dict[int, np.ndarray]], Dict[int, List[int]], List[str]]:
-        object_anno_2D = torch.load(osp.join(scene_folder, 'gt-projection-seg.pt'))
+        # object_anno_2D = torch.load(osp.join(scene_folder, 'gt-projection-seg.pt'))
+        object_anno_2D = np.load(osp.join(scene_folder, 'gt-projection-seg.npz'),allow_pickle=True)
         object_image_votes = {}
         scan_id=scene_folder.split('/')[-1]
         # iterate over all frames

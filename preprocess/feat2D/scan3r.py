@@ -7,7 +7,7 @@ from PIL import Image
 from scipy.spatial.transform import Rotation as R
 from omegaconf import DictConfig
 from typing import List, Dict, Tuple
-
+import os
 from common import load_utils
 from util import render, scan3r, visualisation
 from util import image as image_util
@@ -55,44 +55,53 @@ class Scan3R2DProcessor(Base2DProcessor):
             self.compute2DFeaturesEachScan(scan_id)   
 
     def compute2DImagesAndSeg(self, scan_id: str) -> None:
-        scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-        mesh_file = osp.join(scene_folder, self.label_filename.replace('.align', ''))
-        
-        ply_data = scan3r.load_ply_data(self.data_dir, scene_folder, self.label_filename)
-        instance_ids = ply_data['objectId']
-          
-        camera_info = scan3r.load_intrinsics(scene_folder)
-        intrinsics = camera_info['intrinsic_mat']
-        img_width = int(camera_info['width'])
-        img_height = int(camera_info['height'])
-        
-        mesh = o3d.io.read_triangle_mesh(mesh_file)
-        mesh_triangles = np.asarray(mesh.triangles)
-        colors = np.asarray(mesh.vertex_colors)*255.0
-        colors = colors.round()
-        num_triangles = mesh_triangles.shape[0]
-        
-        scene = o3d.t.geometry.RaycastingScene()
-        scene.add_triangles(o3d.t.geometry.TriangleMesh.from_legacy(mesh))
-         
-        # project 3D model
-        obj_id_imgs = {}
-        for frame_idx in self.frame_pose_data[scan_id]:
-            img_pose = self.frame_pose_data[scan_id][frame_idx]
-            img_pose_inv = np.linalg.inv(img_pose)
-            
-            obj_id_map = render.project_mesh3DTo2D_with_objectseg(
-                scene, intrinsics, img_pose_inv, img_width, img_height, 
-                mesh_triangles, num_triangles, instance_ids
-            )
-            obj_id_imgs[frame_idx] = obj_id_map
+            scene_folder = osp.join(self.data_dir, 'scans', scan_id)
+            mesh_file = osp.join(scene_folder, self.label_filename.replace('.align', ''))
+            obj_id_imgs = {}
+            gt_pt_path = osp.join(scene_folder, 'gt-projection-seg.pt')
+            if osp.exists(gt_pt_path):
+                # print("using gt pt")
+                old_gt = torch.load(gt_pt_path)
+                for frame_idx in self.frame_pose_data[scan_id]:
+                    obj_id_imgs[frame_idx] = old_gt[frame_idx]
+                os.remove(gt_pt_path)
+                    
+            else:
+                ply_data = scan3r.load_ply_data(self.data_dir, scene_folder, self.label_filename)
+                instance_ids = ply_data['objectId']
+                
+                camera_info = scan3r.load_intrinsics(scene_folder)
+                intrinsics = camera_info['intrinsic_mat']
+                img_width = int(camera_info['width'])
+                img_height = int(camera_info['height'])
+                
+                mesh = o3d.io.read_triangle_mesh(mesh_file)
+                mesh_triangles = np.asarray(mesh.triangles)
+                colors = np.asarray(mesh.vertex_colors)*255.0
+                colors = colors.round()
+                num_triangles = mesh_triangles.shape[0]
+                
+                scene = o3d.t.geometry.RaycastingScene()
+                scene.add_triangles(o3d.t.geometry.TriangleMesh.from_legacy(mesh))
+                
+                # project 3D model
+                for frame_idx in self.frame_pose_data[scan_id]:
+                    img_pose = self.frame_pose_data[scan_id][frame_idx]
+                    img_pose_inv = np.linalg.inv(img_pose)
+                    
+                    obj_id_map = render.project_mesh3DTo2D_with_objectseg(
+                        scene, intrinsics, img_pose_inv, img_width, img_height, 
+                        mesh_triangles, num_triangles, instance_ids
+                    )
+                    obj_id_imgs[frame_idx] = obj_id_map
 
-        
-        # save scene-level file for efficient loading
-        scene_out_dir = osp.join(self.out_dir, scan_id)
-        load_utils.ensure_dir(scene_out_dir)
-        
-        torch.save(obj_id_imgs, osp.join(scene_out_dir, 'gt-projection-seg.pt'))
+            
+            # save scene-level file for efficient loading
+            scene_out_dir = osp.join(self.out_dir, scan_id)
+            load_utils.ensure_dir(scene_out_dir)
+            
+            # torch.save(obj_id_imgs, osp.join(scene_out_dir, 'gt-projection-seg.pt'))
+            np.savez_compressed(osp.join(scene_out_dir,'gt-projection-seg.npz'),**obj_id_imgs)
     
     def compute2DFeaturesEachScan(self, scan_id: str) -> None:
         scene_folder = osp.join(self.data_dir, 'scans', scan_id)

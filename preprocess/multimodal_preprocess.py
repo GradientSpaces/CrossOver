@@ -10,7 +10,7 @@ from common import load_utils
 from common.constants import ModalityType
 from util import scan3r, scannet, arkit, multiscan
 from typing import Dict, Optional
-
+import os
 from preprocess.build import PROCESSOR_REGISTRY
 
 @PROCESSOR_REGISTRY.register()
@@ -75,18 +75,20 @@ class MultimodalPreprocessor:
                                     data2D: Optional[Dict] = None, 
                                     data3D: Optional[Dict] = None) -> Dict:
         """Process object-wise data for a single scan combining features from all modalities."""
-        object_id_to_label_id_map  = torch.load(osp.join(out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map'] 
+        # object_id_to_label_id_map  = torch.load(osp.join(out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map'] 
+        object_id_to_label_id_map = np.load(osp.join(out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)['obj_id_to_label_id_map'].item()
+        
         map_object_ids = list(object_id_to_label_id_map.keys())
         
         precomputed_feats, inputs = {}, {}
         
         if data3D is not None:
-            precomputed_feats[ModalityType.POINT] = data3D['objects']['pcl_embeddings'] 
-            precomputed_feats[ModalityType.CAD] = data3D['objects']['cad_embeddings']
+            precomputed_feats[ModalityType.POINT] = data3D['objects'].item()['pcl_embeddings'] 
+            precomputed_feats[ModalityType.CAD] = data3D['objects'].item()['cad_embeddings']
         if data2D is not None:
-            precomputed_feats[ModalityType.RGB] = data2D['objects']['image_embeddings']
+            precomputed_feats[ModalityType.RGB] = data2D['objects'].item()['image_embeddings']
         if data1D is not None:
-            precomputed_feats[ModalityType.REF] = data1D['objects']['referral_embeddings']
+            precomputed_feats[ModalityType.REF] = data1D['objects'].item()['referral_embeddings']
         
         object_ids = []
         for modalityType in ModalityType.__dict__.values():
@@ -141,19 +143,27 @@ class MultimodalPreprocessor:
             'object_id2idx' : object_id2idx,
             'object_id_to_label_id_map' : object_id_to_label_id_map,
             'object_ids' : object_ids,
-            'topK_images_votes' : data2D['objects']['topK_images_votes']
+            'topK_images_votes' : data2D['objects'].item()['topK_images_votes']
         }
-        
-        torch.save(objects_data_pt, osp.join(out_dir, 'objectsDataMultimodal.pt'))
+        pt_multimodal_path = osp.join(out_dir, 'objectsDataMultimodal.pt')
+        if osp.exists(pt_multimodal_path):
+            os.remove(pt_multimodal_path)
+        # torch.save(objects_data_pt, osp.join(out_dir, 'objectsDataMultimodal.pt'))
+        np.savez_compressed(osp.join(out_dir, 'objectsDataMultimodal.npz'), **objects_data_pt)
         return objects_data_pt
         
     def prepareDataEachScan(self, scan_id: str, hf_handler: h5py.File) -> None:
         """Process data for a single scan and store it in the HDF5 file."""
         out_dir = osp.join(self.out_dir, scan_id)
         
-        data1D = torch.load(osp.join(out_dir, 'data1D.pt'))
-        data2D = torch.load(osp.join(out_dir, 'data2D.pt'))
-        data3D = torch.load(osp.join(out_dir, 'data3D.pt'))
+        # data1D = torch.load(osp.join(out_dir, 'data1D.pt'))
+        data1D = np.load(osp.join(out_dir, 'data1D.npz'),allow_pickle=True)
+        
+        # data2D = torch.load(osp.join(out_dir, 'data2D.pt'))
+        data2D = np.load(osp.join(out_dir, 'data2D.npz'),allow_pickle=True)
+        
+        # data3D = torch.load(osp.join(out_dir, 'data3D.pt'))
+        data3D = np.load(osp.join(out_dir, 'data3D.npz'),allow_pickle=True)
         
         objects_data_pt = self.prepareObjectWiseDataEachScan(out_dir, data1D, data2D, data3D)
         self.dumpEachObjectDataPerScan(scan_id, objects_data_pt, hf_handler)

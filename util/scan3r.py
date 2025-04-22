@@ -3,15 +3,19 @@ import numpy as np
 from plyfile import PlyData
 from glob import glob
 import csv
-
+import json
 def get_scan_ids(dirname: str, split: str) -> np.ndarray:
     """Retrieve scan IDs for the given directory and split."""
     filepath = osp.join(dirname, '{}_scans.txt'.format(split))
     scan_ids = np.genfromtxt(filepath, dtype = str)
     return scan_ids
 
-def load_ply_data(data_dir: str, scan_id: str, label_file_name: str) -> np.ndarray:
-    """Load PLY data from specified directory, scan ID, and label file."""
+def load_ply_data(data_dir, scan_id, label_file_name):
+    with open(osp.join(data_dir, scan_id, 'mesh.refined.0.010000.segs.v2.json'), "r", encoding='utf-8') as f:
+            segments = json.load(f)
+    with open(osp.join(data_dir, scan_id, 'semseg.v2.json'), "r", encoding='utf-8') as f:
+        aggregation = json.load(f)
+            
     filename_in = osp.join(data_dir, scan_id, label_file_name)
     file = open(filename_in, 'rb')
     ply_data = PlyData.read(file)
@@ -31,9 +35,32 @@ def load_ply_data(data_dir: str, scan_id: str, label_file_name: str) -> np.ndarr
     vertices = np.empty(len(x), dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'),  ('red', 'u1'), ('green', 'u1'), ('blue', 'u1'),
                                                      ('objectId', 'h'), ('globalId', 'h'), ('NYU40', 'u1'), ('Eigen13', 'u1'), ('RIO27', 'u1')])
     
-    vertices['x'] = x.astype('f4')
-    vertices['y'] = y.astype('f4')
-    vertices['z'] = z.astype('f4')
+    seg_group = aggregation['segGroups']
+    bbox_list = []
+    for i, _ in enumerate(seg_group):
+        rotation = np.array(seg_group[i]["obb"]["normalizedAxes"]).reshape(3, 3)
+        transform = np.array(seg_group[i]["obb"]["centroid"]).reshape(-1, 3)
+        scale = np.array(seg_group[i]["obb"]["axesLengths"]).reshape(-1, 3)
+        trns = np.eye(4)
+        trns[0:3, 3] = transform
+        trns[0:3, 0:3] = rotation.T
+        box3d = compute_box_3d(scale.reshape(3).tolist(), transform, rotation)
+        bbox_list.append(box3d)
+    
+    align_angle = calc_align_matrix(bbox_list)
+    scene_vertices = np.column_stack([x, y, z])    
+    center_points = np.mean(scene_vertices, axis=0)
+    center_points[2] = np.min(scene_vertices[:, 2])
+    scene_vertices = scene_vertices - center_points
+    
+    scene_vertices = rotate_z_axis_by_degrees(np.array(scene_vertices), align_angle)
+    
+    vertices['x'] = scene_vertices[:, 0].astype('f4')
+    vertices['y'] = scene_vertices[:, 1].astype('f4')
+    vertices['z'] = scene_vertices[:, 2].astype('f4')
+    # vertices['x'] = x.astype('f4')
+    # vertices['y'] = y.astype('f4')
+    # vertices['z'] = z.astype('f4')
     vertices['red'] = red.astype('u1')
     vertices['green'] = green.astype('u1')
     vertices['blue'] = blue.astype('u1')
@@ -137,3 +164,68 @@ def represents_int(s: str) -> bool:
         return True
     except ValueError:
         return False
+    
+def calc_align_matrix(bbox_list):
+    RANGE = [-45, 45]
+    NUM_BIN = 90
+    angles = np.linspace(RANGE[0], RANGE[1], NUM_BIN)
+    angle_counts = {}
+    for _a in angles:
+        bucket = round(_a, 3)
+        for box in bbox_list:
+            box_r = rotate_z_axis_by_degrees(box, bucket)
+            bottom = box_r[4:]
+            if is_axis_aligned(bottom):
+                angle_counts[bucket] = angle_counts.get(bucket, 0) + 1
+    if len(angle_counts) == 0:
+        RANGE = [-90, 90]
+        NUM_BIN = 180
+        angles = np.linspace(RANGE[0], RANGE[1], NUM_BIN)
+        for _a in angles:
+            bucket = round(_a, 3)
+            for box in bbox_list:
+                box_r = rotate_z_axis_by_degrees(box, bucket)
+                bottom = box_r[4:]
+                if is_axis_aligned(bottom, thres=0.15):
+                    angle_counts[bucket] = angle_counts.get(bucket, 0) + 1
+    most_common_angle = max(angle_counts, key=angle_counts.get)
+    return most_common_angle
+
+def is_axis_aligned(rotated_box, thres=0.05):
+    x_diff = abs(rotated_box[0][0] - rotated_box[1][0])
+    y_diff = abs(rotated_box[0][1] - rotated_box[3][1])
+    return x_diff < thres and y_diff < thres
+
+def rotate_z_axis_by_degrees(pointcloud, theta, clockwise=True):
+    theta = np.deg2rad(theta)
+    cos_t = np.cos(theta)
+    sin_t = np.sin(theta)
+    rot_matrix = np.array([[cos_t, -sin_t, 0],
+                           [sin_t, cos_t, 0],
+                           [0, 0, 1]], pointcloud.dtype)
+    if not clockwise:
+        rot_matrix = rot_matrix.T
+    return pointcloud.dot(rot_matrix)
+
+def compute_box_3d(size, center, rotmat):
+    """Compute corners of a single box from rotation matrix
+    Args:
+        size: list of float [dx, dy, dz]
+        center: np.array [x, y, z]
+        rotmat: np.array (3, 3)
+    Returns:
+        corners: (8, 3)
+    """
+    l, h, w = [i / 2 for i in size]
+    center = np.reshape(center, (-1, 3))
+    center = center.reshape(3)
+    x_corners = [l, l, -l, -l, l, l, -l, -l]
+    y_corners = [h, -h, -h, h, h, -h, -h, h]
+    z_corners = [w, w, w, w, -w, -w, -w, -w]
+    corners_3d = np.dot(
+        np.transpose(rotmat), np.vstack([x_corners, y_corners, z_corners])
+    )
+    corners_3d[0, :] += center[0]
+    corners_3d[1, :] += center[1]
+    corners_3d[2, :] += center[2]
+    return np.transpose(corners_3d)

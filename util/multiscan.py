@@ -6,6 +6,7 @@ import csv
 import jsonlines
 import json
 import os
+import pandas as pd
 
 MULTISCAN_SCANNET = {
     "wall": "wall",
@@ -492,10 +493,35 @@ def get_scan_ids(dirname, split):
     scan_ids = np.genfromtxt(filepath, dtype = str)
     return scan_ids
 
+def annotations_to_dataframe_obj(annotations):
+        objects = annotations['objects']
+        df_list = []
+        for obj in objects:
+            object_id = obj['objectId']
+            object_label = obj['label']
+            df_row = pd.DataFrame(
+                [[object_id, object_label]],
+                columns=['objectId', 'objectLabel']
+            )
+            df_list.append(df_row)
+        df = pd.concat(df_list)
+        return df
+    
+    
 def load_ply_data(data_dir, scan_id):
     """
     Load PLY data and propagate object IDs from faces to vertices.
+    
+    Args:
+        data_dir (str): Directory containing the PLY file.
+        scan_id (str): Identifier for the scan.
+    
+    Returns:
+        np.ndarray: Vertex data with propagated object IDs.
     """
+    with open(osp.join(data_dir, scan_id, f'{scan_id}.annotations.json'), "r", encoding='utf-8') as f:
+            annotations = json.load(f)
+            
     filename_in = osp.join(data_dir, scan_id, '{}.ply'.format(scan_id))
     
     if not osp.exists(filename_in):
@@ -511,6 +537,7 @@ def load_ply_data(data_dir, scan_id):
     red = np.array(ply_data['vertex']['red'])
     green = np.array(ply_data['vertex']['green'])
     blue = np.array(ply_data['vertex']['blue'])
+    triangles = np.vstack(ply_data['face'].data['vertex_indices'])
     
     # Extract normals if available
     if 'nx' in ply_data['vertex'] and 'ny' in ply_data['vertex'] and 'nz' in ply_data['vertex']:
@@ -521,17 +548,36 @@ def load_ply_data(data_dir, scan_id):
     else:
         normals = None
 
-    # Initialize object IDs for vertices with a default undefined value
-    vertex_object_ids = np.full(len(x), -1, dtype='int32')  # Default: -1 (undefined)
+    scene_vertices = np.column_stack([x, y, z])    
+    center_points = np.mean(scene_vertices, axis=0)
+    center_points[2] = np.min(scene_vertices[:, 2])
+    scene_vertices = scene_vertices - center_points
+    
+    vertex_object_ids = np.zeros((scene_vertices.shape[0])) 
     
     # Extract face data
-    faces = ply_data['face'].data
-    face_vertex_indices = [face['vertex_indices'] for face in faces]
-    face_object_ids = [face['objectId'] for face in faces]
+    # faces = ply_data['face'].data
+    # face_vertex_indices = [face['vertex_indices'] for face in faces]
+    # face_object_ids = [face['objectId'] for face in faces]
     
-    # Propagate object IDs to vertices
-    for face_indices, obj_id in zip(face_vertex_indices, face_object_ids):
-        vertex_object_ids[face_indices] = obj_id  # Assign object ID to all vertices in the face
+    # # Propagate object IDs to vertices
+    # for face_indices, obj_id in zip(face_vertex_indices, face_object_ids):
+    #     vertex_object_ids[face_indices] = obj_id  # Assign object ID to all vertices in the face
+    object_ids = ply_data['face'].data['objectId']
+    part_ids = ply_data['face'].data['partId']
+    
+    semseg_df = pd.DataFrame({'objectId': object_ids, 'partId': part_ids})
+    df = annotations_to_dataframe_obj(annotations)
+    for _, row in df.iterrows():
+        object_id = row['objectId']
+        assert object_id > 0, f"object id should be greater than 0, but got {object_id}"
+
+        condition1 = semseg_df['objectId'] == object_id
+        tri_indices = semseg_df[condition1].index.values
+        object_vertices = np.unique(triangles[tri_indices])
+        vertex_object_ids[object_vertices] = object_id
+    
+    
     
     vertex_dtype = [
         ('x', 'f4'), ('y', 'f4'), ('z', 'f4'),       # Coordinates
@@ -543,10 +589,13 @@ def load_ply_data(data_dir, scan_id):
         vertex_dtype.extend([('nx', 'f4'), ('ny', 'f4'), ('nz', 'f4')])  # Normals
     
     vertices = np.empty(len(x), dtype=vertex_dtype)
-    
-    vertices['x'] = x.astype('f4')
-    vertices['y'] = y.astype('f4')
-    vertices['z'] = z.astype('f4')
+    # Update scene vertices - assign x, y, z coordinates from scene_vertices
+    vertices['x'] = scene_vertices[:, 0].astype('f4')
+    vertices['y'] = scene_vertices[:, 1].astype('f4')
+    vertices['z'] = scene_vertices[:, 2].astype('f4')
+    # vertices['x'] = x.astype('f4')
+    # vertices['y'] = y.astype('f4')
+    # vertices['z'] = z.astype('f4')
     vertices['red'] = red.astype('u1')
     vertices['green'] = green.astype('u1')
     vertices['blue'] = blue.astype('u1')

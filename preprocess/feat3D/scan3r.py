@@ -43,6 +43,9 @@ class Scan3R3DProcessor(Base3DProcessor):
         self.feature_extractor = self.loadFeatureExtractor(config_3D, "3D")
     
     def compute3DFeaturesEachScan(self, scan_id: str) -> None:
+        """
+        Computes 3D features for a single scan.
+        """
         ply_data = scan3r.load_ply_data(osp.join(self.data_dir, 'scans'), scan_id, self.label_filename)
         mesh_points = np.stack([ply_data['x'], ply_data['y'], ply_data['z']]).transpose((1, 0))
         
@@ -79,5 +82,13 @@ class Scan3R3DProcessor(Base3DProcessor):
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
             
-        torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
-        torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
+        # torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
+        # torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
+        pt_data3d_path = osp.join(scene_out_dir, 'data3D.pt')
+        pt_map_path = osp.join(scene_out_dir, 'object_id_to_label_id_map.pt')
+        if osp.exists(pt_data3d_path):
+            os.remove(pt_data3d_path)
+        if osp.exists(pt_map_path): 
+            os.remove(pt_map_path)
+        np.savez_compressed(osp.join(scene_out_dir, 'data3D.npz'), **data3D)
+        np.savez_compressed(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'), **object_id_to_label_id_map)

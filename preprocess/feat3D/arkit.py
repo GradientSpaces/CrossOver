@@ -3,7 +3,7 @@ import open3d as o3d
 import numpy as np
 import torch
 from tqdm import tqdm
-
+import os
 from common import load_utils 
 from util import point_cloud, arkit
 from util.arkit import ARKITSCENE_SCANNET
@@ -93,5 +93,14 @@ class ARKitScenes3DProcessor(Base3DProcessor):
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
             
-        torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
-        torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
+        # torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
+        # torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
+        pt_data3d_path = osp.join(scene_out_dir, 'data3D.pt')
+        pt_map_path = osp.join(scene_out_dir, 'object_id_to_label_id_map.pt')
+        if osp.exists(pt_data3d_path):
+            os.remove(pt_data3d_path)
+        if osp.exists(pt_map_path): 
+            os.remove(pt_map_path)
+            
+        np.savez_compressed(osp.join(scene_out_dir, 'data3D.npz'), **data3D)
+        np.savez_compressed(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'), **object_id_to_label_id_map)

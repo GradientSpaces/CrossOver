@@ -22,7 +22,7 @@ class Structured3D_3DProcessor(Base3DProcessor):
         
         self.out_dir = config_data.process_dir
         load_utils.ensure_dir(self.out_dir)
-        self.undefined = 0        
+        # self.undefined = 0      
 
     def compute3DFeaturesEachScan(self, scan_id):
         scan_id = scan_id.split('_')
@@ -70,8 +70,8 @@ class Structured3D_3DProcessor(Base3DProcessor):
             unique_ids, counts = np.unique(nyu40ids_for_object, return_counts=True)
             nyu40id = unique_ids[np.argmax(counts)]
             object_id_to_label_id[instance_id] = nyu40id
-            if instance_id==0:
-                print(nyu40id)
+            # if instance_id==0:
+            #     print(nyu40id)
             
             if object_pcl.shape[0] >= self.config_3D.min_points_per_object:
                 object_pcl_embeddings[instance_id] = self.normalizeObjectPCLAndExtractFeats(object_pcl)
@@ -89,6 +89,8 @@ class Structured3D_3DProcessor(Base3DProcessor):
         scene_out_dir = osp.join(self.out_dir, scan_id+'_'+room_id)
         load_utils.ensure_dir(scene_out_dir)
             
-        torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
-        torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
+        # torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
+        # torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data3D.npz'), **data3D)
+        np.savez_compressed(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'), **object_id_to_label_id_map)
     

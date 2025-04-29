@@ -83,12 +83,12 @@ class MultimodalPreprocessor:
         precomputed_feats, inputs = {}, {}
         
         if data3D is not None:
-            precomputed_feats[ModalityType.POINT] = data3D['objects']['pcl_embeddings'] 
-            precomputed_feats[ModalityType.CAD] = data3D['objects']['cad_embeddings']
+            precomputed_feats[ModalityType.POINT] = data3D['objects'].item()['pcl_embeddings'] 
+            precomputed_feats[ModalityType.CAD] = data3D['objects'].item()['cad_embeddings']
         if data2D is not None:
-            precomputed_feats[ModalityType.RGB] = data2D['objects']['image_embeddings']
+            precomputed_feats[ModalityType.RGB] = data2D['objects'].item()['image_embeddings']
         if data1D is not None:
-            precomputed_feats[ModalityType.REF] = data1D['objects']['referral_embeddings']
+            precomputed_feats[ModalityType.REF] = data1D['objects'].item()['referral_embeddings']
         
         object_ids = []
         for modalityType in ModalityType.__dict__.values():
@@ -143,7 +143,7 @@ class MultimodalPreprocessor:
             'object_id2idx' : object_id2idx,
             'object_id_to_label_id_map' : object_id_to_label_id_map,
             'object_ids' : object_ids,
-            'topK_images_votes' : data2D['objects']['topK_images_votes']
+            'topK_images_votes' : data2D['objects'].item()['topK_images_votes']
         }
         np.savez_compressed(osp.join(out_dir, 'objectsDataMultimodal.npz'), **objects_data_pt)
         return objects_data_pt

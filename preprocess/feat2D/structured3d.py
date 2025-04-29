@@ -72,7 +72,8 @@ class Structured3D_2DProcessor(Base2DProcessor):
         if osp.exists(osp.join(scene_folder, 'gt-projection')):
             shutil.rmtree(osp.join(scene_folder, 'gt-projection'))
     
-        torch.save(obj_id_imgs, osp.join(scene_folder, 'gt-projection-seg.pt'))
+        # torch.save(obj_id_imgs, osp.join(scene_folder, 'gt-projection-seg.pt'))
+        np.savez_compressed(osp.join(scene_folder,'gt-projection-seg.npz'),**obj_id_imgs)
     
     def compute2DFeaturesEachScan(self, scan_id):
         full_scan_id = scan_id
@@ -84,7 +85,8 @@ class Structured3D_2DProcessor(Base2DProcessor):
         scene_out_dir = osp.join(self.out_dir, full_scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
-        obj_id_to_label_id_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']
+        # obj_id_to_label_id_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']
+        obj_id_to_label_id_map = np.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)['obj_id_to_label_id_map'].item()
         
         floorplan_img_path = osp.join(self.data_dir,'scans', scan_id, 'floorplans', f'{room_id}.png')
         floorplan_img = cv2.imread(floorplan_img_path)
@@ -126,7 +128,8 @@ class Structured3D_2DProcessor(Base2DProcessor):
         
         data2D['scene']['floorplan'] = floorplan_dict
         
-        torch.save(data2D, osp.join(scene_out_dir, 'data2D.pt'))
+        # torch.save(data2D, osp.join(scene_out_dir, 'data2D.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data2D.npz'), **data2D)
     
     # def computeAllImageFeaturesEachScan(self, scan_id):
     #     scene_folder = osp.join(self.data_dir, 'scenes', scan_id)
@@ -152,6 +155,7 @@ class Structured3D_2DProcessor(Base2DProcessor):
     #     data2D['scene'] = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
     #                        'frame_idxs' : frame_idxs}
     #     torch.save(data2D, osp.join(scene_out_dir, 'data2D_all_images.pt'))
+    #     np.savez_compressed(osp.join(scene_out_dir, 'data2D_all_images.npz'), **data2D)
     
     def computeSelectedImageFeaturesEachScan(self, scan_id, color_path, frame_idxs):
         # Sample Camera Indexes Based on Rotation Matrix From Grid
@@ -182,7 +186,8 @@ class Structured3D_2DProcessor(Base2DProcessor):
         return pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs
     
     def computeImageFeaturesAllObjectsEachScan(self, scene_folder, obj_id_to_label_id_map):
-        object_anno_2D = torch.load(osp.join(scene_folder, 'gt-projection-seg.pt'))
+        # object_anno_2D = torch.load(osp.join(scene_folder, 'gt-projection-seg.pt'))
+        object_anno_2D = np.load(osp.join(scene_folder, 'gt-projection-seg.npz'),allow_pickle=True)
         object_image_votes = {}
         
         # iterate over all frames

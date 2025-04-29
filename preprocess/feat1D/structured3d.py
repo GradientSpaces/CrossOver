@@ -58,7 +58,8 @@ class Structured3D_1DProcessor(Base1DProcessor):
         data1D['objects'] = {'referral_embeddings' : object_referral_embeddings}
         data1D['scene']   = {'referral_embedding': scene_referral_embeddings}
         
-        torch.save(data1D, osp.join(scene_out_dir, 'data1D.pt'))
+        # torch.save(data1D, osp.join(scene_out_dir, 'data1D.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data1D.npz'), **data1D)
              
     def computeObjectWise1DFeaturesEachScan(self, scan_id, objectID_to_labelID_map, obj2tgtid):
         object_referral_embeddings = {}

@@ -131,11 +131,15 @@ class ScanBase(Dataset):
         
         scan_process_dir = osp.join(self.process_dir, 'scans', scan_id)
         
-        scan_objects_data = torch.load(osp.join(scan_process_dir, 'objectsDataMultimodal.pt'))
+        # scan_objects_data = torch.load(osp.join(scan_process_dir, 'objectsDataMultimodal.pt'))
+        scan_objects_data = np.load(osp.join(scan_process_dir, 'objectsDataMultimodal.npz'), allow_pickle=True)
         
-        scandata_1d = torch.load(osp.join(scan_process_dir, 'data1D.pt'))
-        scandata_2d = torch.load(osp.join(scan_process_dir, 'data2D.pt'))
-        scandata_3d = torch.load(osp.join(scan_process_dir, 'data3D.pt'))
+        # scandata_1d = torch.load(osp.join(scan_process_dir, 'data1D.pt'))
+        scandata_1d = np.load(osp.join(scan_process_dir, 'data1D.npz'), allow_pickle=True)
+        # scandata_2d = torch.load(osp.join(scan_process_dir, 'data2D.pt'))
+        scandata_2d = np.load(osp.join(scan_process_dir, 'data2D.npz'), allow_pickle=True)
+        # scandata_3d = torch.load(osp.join(scan_process_dir, 'data3D.pt'))
+        scandata_3d = np.load(osp.join(scan_process_dir, 'data3D.npz'), allow_pickle=True)
         
         # Point Cloud Data -- Scene
         points, feats, scene_label = scandata_3d['scene'].item()['pcl_coords'], scandata_3d['scene'].item()['pcl_feats'], scandata_3d['scene'].item()['scene_label']

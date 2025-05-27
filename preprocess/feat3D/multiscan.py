@@ -1,11 +1,9 @@
 import os.path as osp
 import open3d as o3d
 import numpy as np
-import torch
-from tqdm import tqdm
 import os
 from common import load_utils 
-from util import point_cloud, multiscan
+from util import multiscan
 from util.multiscan import MULTISCAN_SCANNET
 from preprocess.build import PROCESSOR_REGISTRY
 from preprocess.feat3D.base import Base3DProcessor
@@ -50,8 +48,6 @@ class MultiScan3DProcessor(Base3DProcessor):
         
         return objects
 
-
-    
     def compute3DFeaturesEachScan(self, scan_id):
         ply_data = multiscan.load_ply_data(osp.join(self.data_dir, 'scenes'), scan_id)
         mesh_points = np.stack([ply_data['x'], ply_data['y'], ply_data['z']]).transpose((1, 0))
@@ -89,9 +85,6 @@ class MultiScan3DProcessor(Base3DProcessor):
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
             
-        # torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
-        # torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
-        
         # Save as .npz files instead of .pt files
         pt_data3d_path = osp.join(scene_out_dir, 'data3D.pt')
         pt_map_path = osp.join(scene_out_dir, 'object_id_to_label_id_map.pt')

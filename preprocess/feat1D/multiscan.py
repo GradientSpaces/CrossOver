@@ -53,39 +53,32 @@ class MultiScan1DProcessor(Base1DProcessor):
         load_utils.ensure_dir(scene_out_dir)
         pt_1d_path = osp.join(scene_out_dir, "data1D.pt")
         if osp.exists(pt_1d_path):
-            pt_data=torch.load(pt_1d_path)
-            data1D['objects'] = pt_data['objects']
-            data1D['scene'] = pt_data['scene']
             os.remove(pt_1d_path)
 
-        else:
-        # objectID_to_labelID_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']        
-            npz_data = np.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)
-            # print(npz_data)
-            objectID_to_labelID_map = npz_data['obj_id_to_label_id_map'].item()
-            # print(objectID_to_labelID_map)
-            scan_objects = self.load_objects_for_scan(scan_id)
+        # else:   
+        npz_data = np.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)
+        objectID_to_labelID_map = npz_data['obj_id_to_label_id_map'].item()
+        
+        scan_objects = self.load_objects_for_scan(scan_id)
 
-            object_referral_embeddings, scene_referral_embeddings = {}, None
-            if len(scan_objects) != 0:
-                object_referral_embeddings = self.computeObjectWise1DFeaturesEachScan(scan_id, scan_objects, objectID_to_labelID_map)
+        object_referral_embeddings, scene_referral_embeddings = {}, None
+        if len(scan_objects) != 0:
+            object_referral_embeddings = self.computeObjectWise1DFeaturesEachScan(scan_id, scan_objects, objectID_to_labelID_map)
 
-            scene_referrals = [referral for referral in self.object_referrals if referral['scan_id'] == scan_id]
+        scene_referrals = [referral for referral in self.object_referrals if referral['scan_id'] == scan_id]
+        
+        if len(scene_referrals) != 0:
+            if len(scene_referrals) > 10:
+                scene_referrals = np.random.choice(scene_referrals, size=10, replace=False)
             
-            if len(scene_referrals) != 0:
-                if len(scene_referrals) > 10:
-                    scene_referrals = np.random.choice(scene_referrals, size=10, replace=False)
-                
-                scene_referrals = [scene_referral['utterance'] for scene_referral in scene_referrals]
-                scene_referrals = ' '.join(scene_referrals)
-                scene_referral_embeddings = self.extractTextFeats([scene_referrals], return_text=True)            
-                assert scene_referral_embeddings is not None
+            scene_referrals = [scene_referral['utterance'] for scene_referral in scene_referrals]
+            scene_referrals = ' '.join(scene_referrals)
+            scene_referral_embeddings = self.extractTextFeats([scene_referrals], return_text=True)            
+            assert scene_referral_embeddings is not None
+        
+        data1D['objects'] = {'referral_embeddings' : object_referral_embeddings}
+        data1D['scene']   = {'referral_embedding': scene_referral_embeddings}
             
-            data1D['objects'] = {'referral_embeddings' : object_referral_embeddings}
-            data1D['scene']   = {'referral_embedding': scene_referral_embeddings}
-            
-        # torch.save(data1D, osp.join(scene_out_dir, 'data1D.pt'))
-        # Combine and save as npz
         np.savez_compressed(osp.join(scene_out_dir, 'data1D.npz'), **data1D)
         
     def computeObjectWise1DFeaturesEachScan(self, scan_id, scan_objects, objectID_to_labelID_map):
@@ -108,6 +101,5 @@ class MultiScan1DProcessor(Base1DProcessor):
                     assert object_referral_feats.shape == (1, self.embed_dim)
                     
                     object_referral_embeddings[instance_id] = {'referral' : object_referral, 'feats' : object_referral_feats}
-
-            
+    
         return object_referral_embeddings

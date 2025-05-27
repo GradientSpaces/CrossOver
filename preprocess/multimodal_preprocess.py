@@ -75,7 +75,6 @@ class MultimodalPreprocessor:
                                     data2D: Optional[Dict] = None, 
                                     data3D: Optional[Dict] = None) -> Dict:
         """Process object-wise data for a single scan combining features from all modalities."""
-        # object_id_to_label_id_map  = torch.load(osp.join(out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map'] 
         object_id_to_label_id_map = np.load(osp.join(out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)['obj_id_to_label_id_map'].item()
         
         map_object_ids = list(object_id_to_label_id_map.keys())

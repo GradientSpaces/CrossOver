@@ -11,12 +11,12 @@ def get_scan_ids(dirname: str, split: str) -> np.ndarray:
     return scan_ids
 
 def load_ply_data(data_dir, scan_id, label_file_name):
-    with open(osp.join(data_dir, scan_id, 'mesh.refined.0.010000.segs.v2.json'), "r", encoding='utf-8') as f:
+    with open(osp.join(data_dir, 'scans', scan_id, 'mesh.refined.0.010000.segs.v2.json'), "r", encoding='utf-8') as f:
             segments = json.load(f)
-    with open(osp.join(data_dir, scan_id, 'semseg.v2.json'), "r", encoding='utf-8') as f:
+    with open(osp.join(data_dir, 'scans', scan_id, 'semseg.v2.json'), "r", encoding='utf-8') as f:
         aggregation = json.load(f)
             
-    filename_in = osp.join(data_dir, scan_id, label_file_name)
+    filename_in = osp.join(data_dir, 'scans', scan_id, label_file_name)
     file = open(filename_in, 'rb')
     ply_data = PlyData.read(file)
     file.close()

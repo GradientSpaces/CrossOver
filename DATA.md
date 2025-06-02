@@ -12,6 +12,7 @@ We list the available data used in the current version of CrossOver in the table
 | 3RScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ✅                       |          ✅                |
 | ARKitScenes       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                      |          ✅                |
 | MultiScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
+| Structured3D       | `[point, rgb, referral]`      | `[point, rgb, referral, floorplan]`            |    ❌                       |          ❌                |
 
 
 We detail data download and release instructions for preprocessing with scripts for ScanNet + 3RScan. 
@@ -176,5 +177,32 @@ ARKitScenes/
 |   │   ├── object_id_to_label_id_map.pt -> Instance ID to NYU40 Label mapped
 |   │   ├── objectsDataMultimodal.pt -> object data combined from data1D.pt + data2D.pt + data3D.pt (for easier loading)
 |   │   └── sel_cams_on_mesh.png (visualisation of the cameras selected for computing RGB features per scan)
+|   └── ...
+```
+
+
+### Structured3D
+
+#### Running preprocessing scripts
+Adjust the path parameters of `Structured3D` in the config files under `configs/preprocess`. Run the following (after changing the `--config-path` in the bash file):
+
+```bash
+$ bash scripts/preprocess/process_structured3d.sh
+```
+
+
+```
+Structured3D/
+├── objects_chunked/ (object data chunked into hdf5 format for instance baseline training)
+|   ├── train_objects.h5
+|   └── val_objects.h5
+├── scans/
+|   ├── scene_00000_490854/
+|   │   ├── gt-projection-seg.npz -> framewise 2D instance segmentation
+|   │   ├── data1D.npz -> all 1D data + encoded (object referrals + BLIP features) 
+|   │   ├── data2D.npz -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
+|   │   ├── data3D.npz -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
+|   │   ├── object_id_to_label_id_map.npz -> Instance ID to NYU40 Label mapped
+|   │   ├── objectsDataMultimodal.npz -> object data combined from data1D.npz + data2D.npz + data3D.npz (for easier loading)
 |   └── ...
 ```

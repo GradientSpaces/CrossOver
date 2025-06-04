@@ -190,8 +190,9 @@ MultiScan/
 
 #### Structured3D
 
-1. Download Structured3D data(bbox data + perspective_full data for all non corrupt zips), unzip all and run the following scripts after making path related changes in each:
+1. Download Structured3D data(bbox data + perspective_full data for all non corrupt zips), run the following scripts after making path related changes in each:
 ```bash
+bash prepare_data/structured3d/unzip_data.sh
 python prepare_data/structured3d/move_data.py
 python prepare_data/structured3d/move_annotation.py
 ```

@@ -224,7 +224,7 @@ python3 prepare_data/structured3d/uni3dscene.py base_dir PATH_TO STRUCTURED3D/SC
 ```
 3. We generate roomwise floorplans for all scenes with the following script:
 ```bash
-python3 prepare_data/structured3d/visualize_floorplan.py --path PATH_TO_STRUCTURED3D/SCANS
+python3 prepare_data/structured3d/save_floorplan.py --path PATH_TO_STRUCTURED3D/SCANS
 ```
 
 The final data organization should look like this:

@@ -45,16 +45,14 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         for scan_id in self.scan_ids:
             pose_data = arkit.load_poses(osp.join(self.data_dir, 'scans', scan_id),scan_id, skip=self.frame_skip)
             self.frame_pose_data[scan_id] = pose_data
-        
 
     def compute2DFeatures(self) -> None:
         for scan_id in tqdm(self.scan_ids):
             self.compute2DImagesAndSeg(scan_id)
-            self.compute2DFeaturesEachScan(scan_id)
+            self.compute2DFeaturesEachScan(scan_id)    
     
     def compute2DImagesAndSeg(self, scan_id: str) -> None:
         obj_id_imgs = {}
-        scene_folder = osp.join(self.data_dir, 'scans', scan_id)
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
@@ -62,15 +60,7 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         objects_path = osp.join(self.data_dir, 'scans', scan_id, f"{scan_id}_3dod_annotation.json")
         if not osp.exists(objects_path):
             raise FileNotFoundError(f"Annotations file not found for scan ID: {scan_id}")
-        
-        gt_pt_path = osp.join(scene_folder, 'gt-projection-seg.pt')
-        if osp.exists(gt_pt_path):
-            os.remove(gt_pt_path)
-        
-        gt_pt_path = osp.join(scene_out_dir, 'gt-projection-seg.pt')
-        if osp.exists(gt_pt_path):
-            os.remove(gt_pt_path)
-        
+    
         annotations = load_utils.load_json(objects_path)        
         ply_data = arkit.load_ply_data(osp.join(self.data_dir,'scans'), scan_id, annotations)
         instance_ids = ply_data['objectId']
@@ -110,11 +100,8 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
-        pt_2d_path = osp.join(scene_out_dir, 'data2D.pt')
-        if osp.exists(pt_2d_path):
-            os.remove(pt_2d_path)
-            
-        obj_id_to_label_id_map = np.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)['obj_id_to_label_id_map'].item()
+        
+        obj_id_to_label_id_map = load_utils.load_npz_as_dict(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'))['obj_id_to_label_id_map']
         
         # Multi-view Image -- Object (Embeddings)
         object_image_embeddings, object_image_votes_topK, frame_idxs = self.computeImageFeaturesAllObjectsEachScan(scene_folder, scene_out_dir, obj_id_to_label_id_map)
@@ -147,36 +134,6 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         
         np.savez_compressed(osp.join(scene_out_dir, 'data2D.npz'), **data2D)
     
-    def computeAllImageFeaturesEachScan(self, scan_id: str) -> None:
-        scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-        color_path = osp.join(scene_folder,f'{scan_id}_frames', 'lowres_wide')
-        
-        scene_out_dir = osp.join(self.out_dir, scan_id)
-        load_utils.ensure_dir(scene_out_dir)
-        
-        frame_idxs = list(self.frame_pose_data[scan_id].keys())
-        
-        # Extract Scene Image Features
-        scene_images_pt = []
-        scene_image_embeddings = []
-        # sky_direction=self.metadata[self.metadata['video_id']==int(scan_id)]['sky_direction'].values[0]
-            
-        for frame_index in frame_idxs:
-            image = Image.open(osp.join(color_path, f'{scan_id}_{frame_index}.png'))
-                
-            image = image.resize((self.model_image_size[1], self.model_image_size[0]), Image.BICUBIC)
-            image_pt = self.model.base_tf(image)
-            
-            scene_image_embeddings.append(self.extractFeatures([image_pt], return_only_cls_mean= False))
-            scene_images_pt.append(image_pt)
-        
-        scene_image_embeddings = np.concatenate(scene_image_embeddings)
-        data2D = {} 
-        data2D['scene'] = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
-                           'frame_idxs' : frame_idxs}
-        # torch.save(data2D, osp.join(scene_out_dir, 'data2D_all_images.pt'))
-        np.savez_compressed(osp.join(scene_out_dir, 'data2D_all_images.npz'), **data2D)
-    
     def computeSelectedImageFeaturesEachScan(self, scan_id: str, color_path: str, frame_idxs: List[int]) -> Tuple[np.ndarray, List[torch.tensor], np.ndarray, List[int]]:
         # Sample Camera Indexes Based on Rotation Matrix From Grid
         pose_data = []
@@ -204,9 +161,7 @@ class ARKitScenes2DProcessor(Base2DProcessor):
         scene_image_embeddings = self.extractFeatures(scene_images_pt, return_only_cls_mean= False)
         
         return pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs
-        # return pose_data, None, None, sampled_frame_idxs
         
-    
     def computeImageFeaturesAllObjectsEachScan(self, scene_folder: str, scene_out_dir: str, obj_id_to_label_id_map: dict) -> Tuple[Dict[int, Dict[int, np.ndarray]], Dict[int, List[int]], List[str]]:
         object_anno_2D = np.load(osp.join(scene_out_dir, 'gt-projection-seg.npz'),allow_pickle=True)
         object_image_votes = {}

@@ -45,16 +45,6 @@ class MultiScan2DProcessor(Base2DProcessor):
             while(len(frame_idxs) > 500):
                 self.frame_skip += 2
                 frame_idxs = multiscan.load_frame_idxs(scene_folder, skip=self.frame_skip)
-            # if len(frame_idxs) > 500:
-            #     frame_idxs = multiscan.load_frame_idxs(scene_folder, skip=2)
-            # if len(frame_idxs) > 500:
-            #     frame_idxs = multiscan.load_frame_idxs(scene_folder, skip=5)
-            # if len(frame_idxs) > 500:
-            #     frame_idxs = multiscan.load_frame_idxs(scene_folder, skip=10)
-            # if len(frame_idxs) > 500:
-            #     frame_idxs = multiscan.load_frame_idxs(scene_folder, skip=15)
-            # if len(frame_idxs) > 500:
-            #     frame_idxs = multiscan.load_frame_idxs(scene_folder, skip=20)
             
             pose_data = multiscan.load_all_poses(scene_folder, frame_idxs)
             self.frame_pose_data[scan_id] = pose_data
@@ -72,15 +62,6 @@ class MultiScan2DProcessor(Base2DProcessor):
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
-        gt_pt_path = osp.join(scene_folder, 'gt-projection-seg.pt')
-        if osp.exists(gt_pt_path):
-            os.remove(gt_pt_path)
-            
-        gt_pt_path = osp.join(scene_out_dir, 'gt-projection-seg.pt')
-        if osp.exists(gt_pt_path):
-            os.remove(gt_pt_path)
-                      
-        # else:     
         mesh_file = osp.join(scene_folder, '{}.ply'.format(scan_id))
         ply_data = multiscan.load_ply_data(osp.join(self.data_dir, 'scenes'), scan_id)
         instance_ids = ply_data['objectId']
@@ -119,14 +100,7 @@ class MultiScan2DProcessor(Base2DProcessor):
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
-        pt_2d_path = osp.join(scene_out_dir, 'data2D.pt')
-        if osp.exists(pt_2d_path):
-            os.remove(pt_2d_path)
-        
-        
-            
-        # else:
-        obj_id_to_label_id_map = np.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)['obj_id_to_label_id_map'].item()
+        obj_id_to_label_id_map = load_utils.load_npz_as_dict(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'))['obj_id_to_label_id_map']
         
         # Multi-view Image -- Object (Embeddings)
         object_image_embeddings, object_image_votes_topK, frame_idxs = self.computeImageFeaturesAllObjectsEachScan(scene_folder, scene_out_dir, obj_id_to_label_id_map)

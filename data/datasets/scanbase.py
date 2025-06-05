@@ -10,8 +10,10 @@ from copy import deepcopy
 from omegaconf import DictConfig
 from typing import List, Dict, Any
 
+from common.load_utils import load_npz_as_dict
 from ..transforms import get_transform
 from ..data_utils import pad_tensors
+
 
 class ScanObjectBase(Dataset):
     """Base Dataset class for instance level training"""
@@ -131,18 +133,13 @@ class ScanBase(Dataset):
         
         scan_process_dir = osp.join(self.process_dir, 'scans', scan_id)
         
-        # scan_objects_data = torch.load(osp.join(scan_process_dir, 'objectsDataMultimodal.pt'))
-        scan_objects_data = np.load(osp.join(scan_process_dir, 'objectsDataMultimodal.npz'), allow_pickle=True)
-        
-        # scandata_1d = torch.load(osp.join(scan_process_dir, 'data1D.pt'))
-        scandata_1d = np.load(osp.join(scan_process_dir, 'data1D.npz'), allow_pickle=True)
-        # scandata_2d = torch.load(osp.join(scan_process_dir, 'data2D.pt'))
-        scandata_2d = np.load(osp.join(scan_process_dir, 'data2D.npz'), allow_pickle=True)
-        # scandata_3d = torch.load(osp.join(scan_process_dir, 'data3D.pt'))
-        scandata_3d = np.load(osp.join(scan_process_dir, 'data3D.npz'), allow_pickle=True)
+        scan_objects_data = load_npz_as_dict(osp.join(scan_process_dir, 'objectsDataMultimodal.npz'))
+        scandata_1d = load_npz_as_dict(osp.join(scan_process_dir, 'data1D.npz'))
+        scandata_2d = load_npz_as_dict(osp.join(scan_process_dir, 'data2D.npz'))
+        scandata_3d = load_npz_as_dict(osp.join(scan_process_dir, 'data3D.npz'))
         
         # Point Cloud Data -- Scene
-        points, feats, scene_label = scandata_3d['scene'].item()['pcl_coords'], scandata_3d['scene'].item()['pcl_feats'], scandata_3d['scene'].item()['scene_label']
+        points, feats, scene_label = scandata_3d['scene']['pcl_coords'], scandata_3d['scene']['pcl_feats'], scandata_3d['scene']['scene_label']
         feats /= 255.
         feats -= 0.5
         
@@ -189,8 +186,9 @@ class ScanBase(Dataset):
         
         scene_dict['scene_masks'] = {}
         
-        rgb_embedding = torch.from_numpy(scandata_2d['scene'].item()['scene_embeddings'])
+        rgb_embedding = torch.from_numpy(scandata_2d['scene']['scene_embeddings'])
         rgb_embedding = torch.concatenate([rgb_embedding[:, 0, :], rgb_embedding[:, 1:, :].mean(dim=1)], dim=1)
+        rgb_embedding = rgb_embedding[list(range(0, rgb_embedding.shape[0], 2)), :]
         scene_dict['rgb_embedding'] = rgb_embedding
         
         scene_dict['scene_masks']['rgb'] = torch.Tensor([1.0])
@@ -198,7 +196,7 @@ class ScanBase(Dataset):
         scene_dict['scene_masks']['object'] = torch.Tensor([1.0])
         
         referral_mask = torch.Tensor([0.0])       
-        referral_embedding = scandata_1d['scene'].item()['referral_embedding']
+        referral_embedding = scandata_1d['scene']['referral_embedding']
         
         if referral_embedding is not None:
             referral_embedding = torch.from_numpy(referral_embedding[0]['feat']).reshape(-1,)
@@ -206,7 +204,7 @@ class ScanBase(Dataset):
         else:
             referral_embedding = torch.zeros((scene_dict['rgb_embedding'].shape[-1] // 4, ))
         
-        floorplan_embedding = scandata_2d['scene'].item()['floorplan']['embedding']
+        floorplan_embedding = scandata_2d['scene']['floorplan']['embedding']
         floorplan_mask = torch.Tensor([0.0])
         if floorplan_embedding is not None:
             floorplan_embedding = torch.from_numpy(floorplan_embedding[0, 0]).reshape(-1, )

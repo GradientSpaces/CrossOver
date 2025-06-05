@@ -41,9 +41,8 @@ class Scannet1DProcessor(Base1DProcessor):
         if osp.exists(pt_1d_path):
             os.remove(pt_1d_path)
         
-        # objectID_to_labelID_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']
-        npz_data = np.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)
-        objectID_to_labelID_map = npz_data['obj_id_to_label_id_map'].item()
+        npz_data = load_utils.load_npz_as_dict(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'))
+        objectID_to_labelID_map = npz_data['obj_id_to_label_id_map']
         objects = [objects['objects'] for objects in self.objects if objects['scan'] == scan_id]
         
         object_referral_embeddings, scene_referral_embeddings = {}, None

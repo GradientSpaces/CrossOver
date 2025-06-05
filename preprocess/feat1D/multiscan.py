@@ -55,9 +55,8 @@ class MultiScan1DProcessor(Base1DProcessor):
         if osp.exists(pt_1d_path):
             os.remove(pt_1d_path)
 
-        # else:   
-        npz_data = np.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)
-        objectID_to_labelID_map = npz_data['obj_id_to_label_id_map'].item()
+        npz_data = load_utils.load_npz_as_dict(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'))
+        objectID_to_labelID_map = npz_data['obj_id_to_label_id_map']
         
         scan_objects = self.load_objects_for_scan(scan_id)
 

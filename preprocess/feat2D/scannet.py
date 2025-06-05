@@ -87,9 +87,7 @@ class Scannet2DProcessor(Base2DProcessor):
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
-        pt_2d_path = osp.join(scene_out_dir, 'data2D.pt')
-        if osp.exists(pt_2d_path):
-            os.remove(pt_2d_path)
+        
             
         # Floor-plan rendering
         render_img = self.renderShapeAndFloorplan(scene_folder, scene_out_dir, scan_id)

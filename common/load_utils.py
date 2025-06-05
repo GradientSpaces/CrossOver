@@ -50,6 +50,20 @@ def write_json(data_dict: Any, filename: str) -> None:
     with open(filename, "w") as outfile:
         outfile.write(json_obj)
 
+def load_npz_as_dict(filename: str) -> dict:
+    with np.load(filename, allow_pickle=True) as npz:
+        if isinstance(npz, np.lib.npyio.NpzFile):
+            out = {}
+            for k in npz.files:                
+                val = npz[k]                 
+                if (isinstance(val, np.ndarray) and
+                    val.dtype == object and
+                    val.shape == ()):
+                    out[k] = val.item()        
+                else:
+                    out[k] = val               
+            return out                   
+
 def get_print_format(value: Any) -> str:
     """Determines the appropriate format string for a given value."""
     if isinstance(value, int):

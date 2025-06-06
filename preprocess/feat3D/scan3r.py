@@ -81,12 +81,5 @@ class Scan3R3DProcessor(Base3DProcessor):
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
             
-        pt_data3d_path = osp.join(scene_out_dir, 'data3D.pt')
-        pt_map_path = osp.join(scene_out_dir, 'object_id_to_label_id_map.pt')
-        if osp.exists(pt_data3d_path):
-            os.remove(pt_data3d_path)
-        if osp.exists(pt_map_path): 
-            os.remove(pt_map_path)
-        
         np.savez_compressed(osp.join(scene_out_dir, 'data3D.npz'), **data3D)
         np.savez_compressed(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'), **object_id_to_label_id_map)

@@ -155,7 +155,7 @@ class ScanBase(Dataset):
         
         # Get coords, already zero centered during preprocessing
         coords = np.floor(coords / self.voxel_size)
-        # coords-=coords.min(0)
+        coords-=coords.min(0)
         
         # Object Data
         scene_dict = {}

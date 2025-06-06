@@ -55,10 +55,6 @@ class ARKitScenes1DProcessor(Base1DProcessor):
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
-        pt_1d_path = osp.join(scene_out_dir, "data1D.pt")
-        if osp.exists(pt_1d_path):
-            os.remove(pt_1d_path)
-        
         npz_data = load_utils.load_npz_as_dict(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'))
         objectID_to_labelID_map = npz_data['obj_id_to_label_id_map']
         

@@ -109,12 +109,5 @@ class Scannet3DProcessor(Base3DProcessor):
         assert len(list(object_id_to_label_id.keys())) >= len(list(object_pcl_embeddings.keys())), 'PC does not match for {}'.format(scan_id)
         assert len(list(object_id_to_label_id.keys())) >= len(list(object_cad_embeddings.keys())), 'CAD does not match for {}'.format(scan_id)
         
-        pt_data3d_path = osp.join(scene_out_dir, 'data3D.pt')
-        pt_map_path = osp.join(scene_out_dir, 'object_id_to_label_id_map.pt')
-        if osp.exists(pt_data3d_path):
-            os.remove(pt_data3d_path)
-        if osp.exists(pt_map_path): 
-            os.remove(pt_map_path)
-        
         np.savez_compressed(osp.join(scene_out_dir, 'data3D.npz'), **data3D)
         np.savez_compressed(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'), **object_id_to_label_id_map)

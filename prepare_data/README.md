@@ -194,12 +194,9 @@ MultiScan/
 ```bash
 bash prepare_data/structured3d/unzip_data.sh
 python prepare_data/structured3d/move_data.py
-python prepare_data/structured3d/move_annotation.py
 ```
 This should have moved all downloaded data to one folder - Structured3D. After verifying this, we move the data into a subdirectory to be in accordance with the structure our preprocessing expects using the following commands:
 ```bash
-cd Structured3D
-mkdir scans
 bash prepare_data/structured3d/move2scan.sh
 ```
 At this stage data should look like this:

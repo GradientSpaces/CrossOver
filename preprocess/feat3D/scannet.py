@@ -64,9 +64,9 @@ class Scannet3DProcessor(Base3DProcessor):
         mesh_points = mesh_vertices[:, 0:3] 
         mesh_colors  = mesh_vertices[:, 3:]
         
-        center_points = np.mean(mesh_points, axis=0)
-        center_points[2] = np.min(mesh_points[:, 2])
-        mesh_points = mesh_points - center_points
+        # center_points = np.mean(mesh_points, axis=0)
+        # center_points[2] = np.min(mesh_points[:, 2])
+        # mesh_points = mesh_points - center_points
         
         text_file = mesh_file.replace('_vh_clean_2.labels.ply' , '.txt')
         with open(text_file, 'r') as file:

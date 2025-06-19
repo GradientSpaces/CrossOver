@@ -519,8 +519,8 @@ def load_ply_data(data_dir, scan_id):
     Returns:
         np.ndarray: Vertex data with propagated object IDs.
     """
-    with open(osp.join(data_dir, scan_id, f'{scan_id}.annotations.json'), "r", encoding='utf-8') as f:
-            annotations = json.load(f)
+    # with open(osp.join(data_dir, scan_id, f'{scan_id}.annotations.json'), "r", encoding='utf-8') as f:
+    #         annotations = json.load(f)
             
     filename_in = osp.join(data_dir, scan_id, '{}.ply'.format(scan_id))
     
@@ -537,7 +537,7 @@ def load_ply_data(data_dir, scan_id):
     red = np.array(ply_data['vertex']['red'])
     green = np.array(ply_data['vertex']['green'])
     blue = np.array(ply_data['vertex']['blue'])
-    triangles = np.vstack(ply_data['face'].data['vertex_indices'])
+    # triangles = np.vstack(ply_data['face'].data['vertex_indices'])
     
     # Extract normals if available
     if 'nx' in ply_data['vertex'] and 'ny' in ply_data['vertex'] and 'nz' in ply_data['vertex']:
@@ -548,34 +548,37 @@ def load_ply_data(data_dir, scan_id):
     else:
         normals = None
 
-    scene_vertices = np.column_stack([x, y, z])    
-    center_points = np.mean(scene_vertices, axis=0)
-    center_points[2] = np.min(scene_vertices[:, 2])
-    scene_vertices = scene_vertices - center_points
+    # scene_vertices = np.column_stack([x, y, z])    
+    # center_points = np.mean(scene_vertices, axis=0)
+    # center_points[2] = np.min(scene_vertices[:, 2])
+    # scene_vertices = scene_vertices - center_points
     
-    vertex_object_ids = np.zeros((scene_vertices.shape[0])) 
+    # vertex_object_ids = np.zeros((scene_vertices.shape[0])) 
+    vertex_object_ids = np.full(len(x), -1, dtype='int32')
     
     # Extract face data
-    # faces = ply_data['face'].data
-    # face_vertex_indices = [face['vertex_indices'] for face in faces]
-    # face_object_ids = [face['objectId'] for face in faces]
+    faces = ply_data['face'].data
+    face_vertex_indices = [face['vertex_indices'] for face in faces]
+    face_object_ids = [face['objectId'] for face in faces]
     
-    # # Propagate object IDs to vertices
-    # for face_indices, obj_id in zip(face_vertex_indices, face_object_ids):
-    #     vertex_object_ids[face_indices] = obj_id  # Assign object ID to all vertices in the face
-    object_ids = ply_data['face'].data['objectId']
-    part_ids = ply_data['face'].data['partId']
+    # Propagate object IDs to vertices
+    for face_indices, obj_id in zip(face_vertex_indices, face_object_ids):
+        vertex_object_ids[face_indices] = obj_id  # Assign object ID to all vertices in the face
+        
+        
+    # object_ids = ply_data['face'].data['objectId']
+    # part_ids = ply_data['face'].data['partId']
     
-    semseg_df = pd.DataFrame({'objectId': object_ids, 'partId': part_ids})
-    df = annotations_to_dataframe_obj(annotations)
-    for _, row in df.iterrows():
-        object_id = row['objectId']
-        assert object_id > 0, f"object id should be greater than 0, but got {object_id}"
+    # semseg_df = pd.DataFrame({'objectId': object_ids, 'partId': part_ids})
+    # df = annotations_to_dataframe_obj(annotations)
+    # for _, row in df.iterrows():
+    #     object_id = row['objectId']
+    #     assert object_id > 0, f"object id should be greater than 0, but got {object_id}"
 
-        condition1 = semseg_df['objectId'] == object_id
-        tri_indices = semseg_df[condition1].index.values
-        object_vertices = np.unique(triangles[tri_indices])
-        vertex_object_ids[object_vertices] = object_id
+    #     condition1 = semseg_df['objectId'] == object_id
+    #     tri_indices = semseg_df[condition1].index.values
+    #     object_vertices = np.unique(triangles[tri_indices])
+    #     vertex_object_ids[object_vertices] = object_id
     
     
     
@@ -590,12 +593,12 @@ def load_ply_data(data_dir, scan_id):
     
     vertices = np.empty(len(x), dtype=vertex_dtype)
     # Update scene vertices - assign x, y, z coordinates from scene_vertices
-    vertices['x'] = scene_vertices[:, 0].astype('f4')
-    vertices['y'] = scene_vertices[:, 1].astype('f4')
-    vertices['z'] = scene_vertices[:, 2].astype('f4')
-    # vertices['x'] = x.astype('f4')
-    # vertices['y'] = y.astype('f4')
-    # vertices['z'] = z.astype('f4')
+    # vertices['x'] = scene_vertices[:, 0].astype('f4')
+    # vertices['y'] = scene_vertices[:, 1].astype('f4')
+    # vertices['z'] = scene_vertices[:, 2].astype('f4')
+    vertices['x'] = x.astype('f4')
+    vertices['y'] = y.astype('f4')
+    vertices['z'] = z.astype('f4')
     vertices['red'] = red.astype('u1')
     vertices['green'] = green.astype('u1')
     vertices['blue'] = blue.astype('u1')

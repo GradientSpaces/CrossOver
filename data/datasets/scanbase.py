@@ -153,7 +153,7 @@ class ScanBase(Dataset):
         _, sel = ME.utils.sparse_quantize(points / self.voxel_size, return_index=True)
         coords, feats = points[sel], feats[sel]
         
-        # Get coords, already zero centered during preprocessing
+        # Get coords
         coords = np.floor(coords / self.voxel_size)
         coords-=coords.min(0)
         

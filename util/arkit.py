@@ -263,24 +263,24 @@ def load_ply_data(data_dir, scan_id, annotations):
 
     vertices_structured['objectId'] = vertex_instance
 
-    align_angle = calc_align_matrix(bbox_list)
+    # align_angle = calc_align_matrix(bbox_list)
 
-    vertices_aligned = rotate_z_axis_by_degrees(np.array(vertices), align_angle)
+    # vertices_aligned = rotate_z_axis_by_degrees(np.array(vertices), align_angle)
 
     if np.max(vertex_colors) <= 1:
         vertex_colors = vertex_colors * 255.0
 
-    center_points = np.mean(vertices_aligned, axis=0)
-    center_points[2] = np.min(vertices_aligned[:, 2]) 
-    vertices_aligned = vertices_aligned - center_points
+    # center_points = np.mean(vertices_aligned, axis=0)
+    # center_points[2] = np.min(vertices_aligned[:, 2]) 
+    # vertices_aligned = vertices_aligned - center_points
 
-    vertices_structured['x'] = vertices_aligned[:, 0]
-    vertices_structured['y'] = vertices_aligned[:, 1]
-    vertices_structured['z'] = vertices_aligned[:, 2]
+    # vertices_structured['x'] = vertices_aligned[:, 0]
+    # vertices_structured['y'] = vertices_aligned[:, 1]
+    # vertices_structured['z'] = vertices_aligned[:, 2]
     
-    # vertices_structured['x'] = plydata['vertex']['x']
-    # vertices_structured['y'] = plydata['vertex']['y']
-    # vertices_structured['z'] = plydata['vertex']['z']
+    vertices_structured['x'] = plydata['vertex']['x']
+    vertices_structured['y'] = plydata['vertex']['y']
+    vertices_structured['z'] = plydata['vertex']['z']
     
     return vertices_structured
 

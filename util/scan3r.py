@@ -4,19 +4,15 @@ from plyfile import PlyData
 from glob import glob
 import csv
 import json
+
 def get_scan_ids(dirname: str, split: str) -> np.ndarray:
     """Retrieve scan IDs for the given directory and split."""
     filepath = osp.join(dirname, '{}_scans.txt'.format(split))
     scan_ids = np.genfromtxt(filepath, dtype = str)
     return scan_ids
 
-def load_ply_data(data_dir, scan_id, label_file_name):
-    # with open(osp.join(data_dir, 'scans', scan_id, 'mesh.refined.0.010000.segs.v2.json'), "r", encoding='utf-8') as f:
-    #         segments = json.load(f)
-    # with open(osp.join(data_dir, 'scans', scan_id, 'semseg.v2.json'), "r", encoding='utf-8') as f:
-    #     aggregation = json.load(f)
-            
-    filename_in = osp.join(data_dir, 'scans', scan_id, label_file_name)
+def load_ply_data(data_dir, scan_id, label_file_name):        
+    filename_in = osp.join(data_dir, scan_id, label_file_name)
     file = open(filename_in, 'rb')
     ply_data = PlyData.read(file)
     file.close()
@@ -35,29 +31,6 @@ def load_ply_data(data_dir, scan_id, label_file_name):
     vertices = np.empty(len(x), dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'),  ('red', 'u1'), ('green', 'u1'), ('blue', 'u1'),
                                                      ('objectId', 'h'), ('globalId', 'h'), ('NYU40', 'u1'), ('Eigen13', 'u1'), ('RIO27', 'u1')])
     
-    # seg_group = aggregation['segGroups']
-    # bbox_list = []
-    # for i, _ in enumerate(seg_group):
-    #     rotation = np.array(seg_group[i]["obb"]["normalizedAxes"]).reshape(3, 3)
-    #     transform = np.array(seg_group[i]["obb"]["centroid"]).reshape(-1, 3)
-    #     scale = np.array(seg_group[i]["obb"]["axesLengths"]).reshape(-1, 3)
-    #     trns = np.eye(4)
-    #     trns[0:3, 3] = transform
-    #     trns[0:3, 0:3] = rotation.T
-    #     box3d = compute_box_3d(scale.reshape(3).tolist(), transform, rotation)
-    #     bbox_list.append(box3d)
-    
-    # align_angle = calc_align_matrix(bbox_list)
-    # scene_vertices = np.column_stack([x, y, z])    
-    # center_points = np.mean(scene_vertices, axis=0)
-    # center_points[2] = np.min(scene_vertices[:, 2])
-    # scene_vertices = scene_vertices - center_points
-    
-    # scene_vertices = rotate_z_axis_by_degrees(np.array(scene_vertices), align_angle)
-    
-    # vertices['x'] = scene_vertices[:, 0].astype('f4')
-    # vertices['y'] = scene_vertices[:, 1].astype('f4')
-    # vertices['z'] = scene_vertices[:, 2].astype('f4')
     vertices['x'] = x.astype('f4')
     vertices['y'] = y.astype('f4')
     vertices['z'] = z.astype('f4')

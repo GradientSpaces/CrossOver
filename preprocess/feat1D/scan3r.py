@@ -1,10 +1,9 @@
 import os.path as osp
-import torch
 import numpy as np
 from common import load_utils 
 from util import scan3r
 from typing import Dict, List, Union
-import os
+
 from preprocess.build import PROCESSOR_REGISTRY
 from preprocess.feat1D.base import Base1DProcessor
 

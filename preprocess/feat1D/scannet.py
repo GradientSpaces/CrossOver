@@ -1,7 +1,5 @@
 import os.path as osp
-import torch
 import numpy as np
-import os
 from common import load_utils 
 from util import scannet
 from typing import Dict, List, Union

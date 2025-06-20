@@ -45,7 +45,7 @@ data :
     voxel_size     : 0.02
 
   ARKitScenes:
-    base_dir       : /media/sayan/Expansion/data/datasets/ARKitScenes
+    base_dir       : /drive/datasets/ARKitScenes
     process_dir    : ${data.process_dir}/ARKitScenes/
     chunked_dir    : ${data.process_dir}/ARKitScenes/objects_chunked
     processor3D    : ARKitScenes3DProcessor
@@ -55,7 +55,7 @@ data :
     max_object_len : 150
     voxel_size     : 0.02
   MultiScan:
-    base_dir       : /media/sayan/Expansion/data/datasets/Multiscan
+    base_dir       : /drive/datasets/MultiScan
     process_dir    : ${data.process_dir}/MultiScan/
     chunked_dir    : ${data.process_dir}/MultiScan/objects_chunked
     processor3D    : MultiScan3DProcessor
@@ -72,8 +72,8 @@ task:
     scene_modalities : ['rgb', 'point', 'floorplan', 'referral']
     train            : [Scannet, Scan3R] #, MultiScan, ARKitScenes]
     val              : [Scannet, Scan3R] #, MultiScan, ARKitScenes]
-    object_enc_ckpt  : /drive/dumps/multimodal-spaces/runs/curr_runs/instance_crossover_scannet+scan3r.pth
-    
+    object_enc_ckpt  : /drive/dumps/multimodal-spaces/runs/curr_runs/instance_crossover_scannet+scan3r_scratch.pth
+     
 trainer: UnifiedTrainer
 
 model:
@@ -99,7 +99,7 @@ model:
   base_modality : 'rgb'
 
 dataloader:
-  batch_size  : 32
+  batch_size  : 16
   num_workers : 6
 
 eval:

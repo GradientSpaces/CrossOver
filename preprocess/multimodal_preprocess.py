@@ -2,7 +2,6 @@ import os.path as osp
 import numpy as np
 from functools import reduce
 from operator import add
-import torch
 from tqdm import tqdm
 from omegaconf import DictConfig
 import h5py
@@ -10,7 +9,7 @@ from common import load_utils
 from common.constants import ModalityType
 from util import scan3r, scannet, arkit, multiscan
 from typing import Dict, Optional
-import os
+
 from preprocess.build import PROCESSOR_REGISTRY
 
 @PROCESSOR_REGISTRY.register()

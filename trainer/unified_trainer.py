@@ -16,8 +16,17 @@ class UnifiedTrainer(BaseTrainer):
         super().__init__(cfg)
         
         self.task_config = rgetattr(cfg.task, cfg.task.name)
-        object_enc_ckpt = self.task_config.object_enc_ckpt
         
+        # ckpt = '/drive/dumps/multimodal-spaces/runs/curr_runs/scene_crossover_scannet+scan3r.pth'
+        # self.logger.info(f"Loading Initial Weights from {ckpt}")
+        
+        # # Load model weights from safetensors files
+        # ckpt = osp.join(ckpt, 'model.safetensors')
+        # weights = load_file(ckpt, device = str(self.accelerator.device))
+        # self.model.load_state_dict(weights)
+        # self.logger.info(f"Successfully loaded initial weights from {ckpt}")
+        
+        object_enc_ckpt = self.task_config.object_enc_ckpt
         self.logger.info(f"Loading Object Wise Modality Encoder from {str(object_enc_ckpt)}")
         # Load model weights from safetensors files
         object_enc_ckpt = osp.join(object_enc_ckpt, 'model.safetensors')

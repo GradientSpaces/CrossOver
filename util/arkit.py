@@ -219,15 +219,11 @@ def load_ply_data(data_dir, scan_id, annotations):
     file = open(filename_in, 'rb')
     plydata = PlyData.read(file)
     file.close()
-    # plydata = trimesh.load(filename_in, process=False)
     vertices = plydata['vertex']['x'], plydata['vertex']['y'], plydata['vertex']['z']
-    # vertices=plydata.vertices
     vertices = np.vstack(vertices).T
 
     vertex_colors = plydata['vertex']['red'], plydata['vertex']['green'], plydata['vertex']['blue']
     vertex_colors = np.vstack(vertex_colors).T
-    # vertex_colors = plydata.visual.vertex_colors
-    # print("vertex_colors", vertex_colors.shape)
     vertex_dtype = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), 
                     ('red', 'u1'), ('green', 'u1'), ('blue', 'u1'),
                     ('objectId', 'h')]  
@@ -258,25 +254,10 @@ def load_ply_data(data_dir, scan_id, annotations):
         box3d = compute_box_3d(scale.reshape(3).tolist(), transform, rotation)
         bbox_list.append(box3d)
     
-    # if len(bbox_list) == 0:
-    #         return
-
     vertices_structured['objectId'] = vertex_instance
-
-    # align_angle = calc_align_matrix(bbox_list)
-
-    # vertices_aligned = rotate_z_axis_by_degrees(np.array(vertices), align_angle)
-
     if np.max(vertex_colors) <= 1:
         vertex_colors = vertex_colors * 255.0
 
-    # center_points = np.mean(vertices_aligned, axis=0)
-    # center_points[2] = np.min(vertices_aligned[:, 2]) 
-    # vertices_aligned = vertices_aligned - center_points
-
-    # vertices_structured['x'] = vertices_aligned[:, 0]
-    # vertices_structured['y'] = vertices_aligned[:, 1]
-    # vertices_structured['z'] = vertices_aligned[:, 2]
     
     vertices_structured['x'] = plydata['vertex']['x']
     vertices_structured['y'] = plydata['vertex']['y']

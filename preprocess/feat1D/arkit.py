@@ -1,6 +1,5 @@
 import os.path as osp
 import numpy as np
-import os
 from common import load_utils 
 from util import arkit
 from util.arkit import ARKITSCENE_SCANNET

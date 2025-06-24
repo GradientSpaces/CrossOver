@@ -33,7 +33,7 @@ data :
     voxel_size       : 0.02
   
   Scan3R:
-    base_dir       : /drive/datasets/Scan3R/
+    base_dir       : /media/sayan/internal/datasets/Scan3R/
     process_dir    : ${data.process_dir}/Scan3R/
     chunked_dir    : ${data.process_dir}/Scan3R/objects_chunked/
     processor3D    : Scan3R3DProcessor
@@ -45,7 +45,7 @@ data :
     voxel_size     : 0.02
 
   ARKitScenes:
-    base_dir       : /drive/datasets/ARKitScenes
+    base_dir       : /media/sayan/internal/datasets/ARKitScenes
     process_dir    : ${data.process_dir}/ARKitScenes/
     chunked_dir    : ${data.process_dir}/ARKitScenes/objects_chunked
     processor3D    : ARKitScenes3DProcessor
@@ -55,7 +55,7 @@ data :
     max_object_len : 150
     voxel_size     : 0.02
   MultiScan:
-    base_dir       : /drive/datasets/MultiScan
+    base_dir       : /media/sayan/internal/datasets/Multiscan
     process_dir    : ${data.process_dir}/MultiScan/
     chunked_dir    : ${data.process_dir}/MultiScan/objects_chunked
     processor3D    : MultiScan3DProcessor

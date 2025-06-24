@@ -17,7 +17,7 @@ data:
     aggre_subfix   : _vh_clean.aggregation.json
   
   Scan3R:
-    base_dir       : /drive/datasets/Scan3R/
+    base_dir       : /media/sayan/internal/datasets/Scan3R/
     process_dir    : ${data.process_dir}/Scan3R/
     processor3D    : Scan3R3DProcessor
     processor2D    : Scan3R2DProcessor
@@ -25,13 +25,13 @@ data:
     label_filename : labels.instances.align.annotated.v2.ply
 
   ARKitScenes:
-    base_dir       : /media/sayan/Expansion/data/datasets/ARKitScenes
+    base_dir       : /media/sayan/internal/datasets/ARKitScenes
     process_dir    : ${data.process_dir}/ARKitScenes/
     processor3D    : ARKitScenes3DProcessor
     processor2D    : ARKitScenes2DProcessor
     processor1D    : ARKitScenes1DProcessor
   MultiScan:
-    base_dir       : /media/sayan/Expansion/data/datasets/MultiScan
+    base_dir       : /media/sayan/internal/datasets/MultiScan
     process_dir    : ${data.process_dir}/MultiScan
     processor3D    : MultiScan3DProcessor
     processor2D    : MultiScan2DProcessor

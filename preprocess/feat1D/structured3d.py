@@ -36,8 +36,8 @@ class Structured3D_1DProcessor(Base1DProcessor):
         
         scene_out_dir = osp.join(self.out_dir, full_scan_id)
         load_utils.ensure_dir(scene_out_dir)
+        objectID_to_labelID_map = load_utils.load_npz_as_dict(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'))['obj_id_to_label_id_map']
         
-        objectID_to_labelID_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map'] 
         
         object_referral_embeddings, scene_referral_embeddings = {}, None
         if len(objectID_to_labelID_map.keys()) != 0:

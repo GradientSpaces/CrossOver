@@ -61,36 +61,30 @@ class Structured3D_3DProcessor(Base3DProcessor):
                 continue
             
             assert instance_id not in object_id_to_label_id
-            # first_point_idx = np.where(object_ids == instance_id)[0][0]
-            # nyu40id = semantic_ids[first_point_idx]
-            # object_id_to_label_id[instance_id] = nyu40id
+
             # Find the most common nyu40id for this object
             all_point_indices = np.where(object_ids == instance_id)[0]
             nyu40ids_for_object = semantic_ids[all_point_indices]
             unique_ids, counts = np.unique(nyu40ids_for_object, return_counts=True)
             nyu40id = unique_ids[np.argmax(counts)]
             object_id_to_label_id[instance_id] = nyu40id
-            # if instance_id==0:
-            #     print(nyu40id)
+
             
             if object_pcl.shape[0] >= self.config_3D.min_points_per_object:
                 object_pcl_embeddings[instance_id] = self.normalizeObjectPCLAndExtractFeats(object_pcl)
             else:
                 print("Object {} has less than {} points".format(instance_id, self.config_3D.min_points_per_object))
             
-        # print(scene_label)
         data3D = {}    
         data3D['objects'] = {'pcl_embeddings' : object_pcl_embeddings, 'cad_embeddings': object_cad_embeddings}
         data3D['scene']   = {'pcl_coords': mesh_points, 'pcl_feats': mesh_colors, 'scene_label' : scene_label}
-        # print(object_id_to_label_id)
+
         object_id_to_label_id_map = { 'obj_id_to_label_id_map' : object_id_to_label_id}
         
         assert len(list(object_id_to_label_id.keys())) >= len(list(object_pcl_embeddings.keys())), 'PC does not match for {}'.format(scan_id)
         scene_out_dir = osp.join(self.out_dir, scan_id+'_'+room_id)
         load_utils.ensure_dir(scene_out_dir)
             
-        # torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
-        # torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
         np.savez_compressed(osp.join(scene_out_dir, 'data3D.npz'), **data3D)
         np.savez_compressed(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'), **object_id_to_label_id_map)
     

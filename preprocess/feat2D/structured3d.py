@@ -85,8 +85,7 @@ class Structured3D_2DProcessor(Base2DProcessor):
         scene_out_dir = osp.join(self.out_dir, full_scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
-        # obj_id_to_label_id_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']
-        obj_id_to_label_id_map = np.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'),allow_pickle=True)['obj_id_to_label_id_map'].item()
+        obj_id_to_label_id_map = load_utils.load_npz_as_dict(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'))['obj_id_to_label_id_map']
         
         floorplan_img_path = osp.join(self.data_dir,'scans', scan_id, 'floorplans', f'{room_id}.png')
         floorplan_img = cv2.imread(floorplan_img_path)
@@ -101,25 +100,13 @@ class Structured3D_2DProcessor(Base2DProcessor):
             floorplan_img_pt = self.model.base_tf(floorplan_img)
             floorplan_embeddings = self.extractFeatures([floorplan_img_pt], return_only_cls_mean = False)            
         floorplan_dict = {'img' : floorplan_img, 'embedding' : floorplan_embeddings}
-        # print(floorplan_dict)
+
         # Multi-view Image -- Object (Embeddings)
         object_image_embeddings, object_image_votes_topK, frame_idxs = self.computeImageFeaturesAllObjectsEachScan(scene_folder, obj_id_to_label_id_map)
         
         # Multi-view Image -- Scene (Images + Embeddings)
         frame_idxs = list(self.frame_pose_data[full_scan_id].keys())
         pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs = self.computeSelectedImageFeaturesEachScan(full_scan_id, scene_folder, frame_idxs)
-        
-        # Visualise
-        # camera_info = structured3d.load_intrinsics(scene_folder)
-        # intrinsic_mat = camera_info['intrinsic_mat']
-        
-        # scene_mesh = o3d.io.read_triangle_mesh(osp.join(self.data_dir, 'scans', scan_id, '3D_rendering', room_id,'room_mesh.ply'))
-        # intrinsics = { 'f' : intrinsic_mat[0, 0], 'cx' : intrinsic_mat[0, 2], 'cy' : intrinsic_mat[1, 2], 
-        #                 'w' : int(camera_info['width']), 'h' : int(camera_info['height'])}
-        
-        # cams_visualised_on_mesh = visualisation.visualise_camera_on_mesh(scene_mesh, pose_data[sampled_frame_idxs], intrinsics, stride=1)
-        # image_path = osp.join(scene_out_dir, 'sel_cams_on_mesh.png')
-        # Image.fromarray((cams_visualised_on_mesh * 255).astype(np.uint8)).save(image_path)
         
         data2D = {}
         data2D['objects'] = {'image_embeddings': object_image_embeddings, 'topK_images_votes' : object_image_votes_topK}

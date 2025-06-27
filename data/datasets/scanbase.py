@@ -139,7 +139,7 @@ class ScanBase(Dataset):
         scandata_3d = load_npz_as_dict(osp.join(scan_process_dir, 'data3D.npz'))
         
         # Point Cloud Data -- Scene
-        points, feats, scene_label = scandata_3d['scene'].item()['pcl_coords'], scandata_3d['scene'].item()['pcl_feats'], scandata_3d['scene'].item()['scene_label']
+        points, feats, scene_label = scandata_3d['scene']['pcl_coords'], scandata_3d['scene']['pcl_feats'], scandata_3d['scene']['scene_label']
         feats /= 255.
         feats -= 0.5
         
@@ -186,7 +186,7 @@ class ScanBase(Dataset):
         
         scene_dict['scene_masks'] = {}
         
-        rgb_embedding = torch.from_numpy(scandata_2d['scene'].item()['scene_embeddings'])
+        rgb_embedding = torch.from_numpy(scandata_2d['scene']['scene_embeddings'])
         rgb_embedding = torch.concatenate([rgb_embedding[:, 0, :], rgb_embedding[:, 1:, :].mean(dim=1)], dim=1)
         rgb_embedding = rgb_embedding[list(range(0, rgb_embedding.shape[0], 2)), :]
         scene_dict['rgb_embedding'] = rgb_embedding
@@ -196,7 +196,7 @@ class ScanBase(Dataset):
         scene_dict['scene_masks']['object'] = torch.Tensor([1.0])
         
         referral_mask = torch.Tensor([0.0])       
-        referral_embedding = scandata_1d['scene'].item()['referral_embedding']
+        referral_embedding = scandata_1d['scene']['referral_embedding']
         
         if referral_embedding is not None:
             referral_embedding = torch.from_numpy(referral_embedding[0]['feat']).reshape(-1,)
@@ -204,7 +204,7 @@ class ScanBase(Dataset):
         else:
             referral_embedding = torch.zeros((scene_dict['rgb_embedding'].shape[-1] // 4, ))
         
-        floorplan_embedding = scandata_2d['scene'].item()['floorplan']['embedding']
+        floorplan_embedding = scandata_2d['scene']['floorplan']['embedding']
         floorplan_mask = torch.Tensor([0.0])
         if floorplan_embedding is not None:
             floorplan_embedding = torch.from_numpy(floorplan_embedding[0, 0]).reshape(-1, )

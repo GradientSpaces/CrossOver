@@ -54,7 +54,6 @@ def get_scan_ids(dirname, split):
 def load_ply_data(data_dir, scan_id, room_id):
     
     filename_in = osp.join(data_dir, scan_id, '3D_rendering', room_id, 'room_mesh.ply')
-    print(scan_id)
     if not osp.exists(filename_in):
         raise FileNotFoundError(f"PLY file not found: {filename_in}")
     
@@ -75,32 +74,31 @@ def load_ply_data(data_dir, scan_id, room_id):
             ('x', 'f4'), ('y', 'f4'), ('z', 'f4'),
             ('red', 'u1'), ('green', 'u1'), ('blue', 'u1'), ('alpha', 'u1'),
             ('objectId', 'i4'),
-            ('nyu40id', 'i4'),
-            ('targetId', 'i4')
-            
+            ('nyu40id', 'i4')
+            # ('targetId', 'i4')
         ]
     
-    scene_vertices = np.column_stack([x, y, z])    
-    center_points = np.mean(scene_vertices, axis=0)
-    center_points[2] = np.min(scene_vertices[:, 2])
-    scene_vertices = scene_vertices - center_points
+    # scene_vertices = np.column_stack([x, y, z])    
+    # center_points = np.mean(scene_vertices, axis=0)
+    # center_points[2] = np.min(scene_vertices[:, 2])
+    # scene_vertices = scene_vertices - center_points
     
     vertices = np.empty(len(x), dtype=vertex_dtype)
     
-    vertices['x'] = scene_vertices[:, 0].astype('f4')
-    vertices['y'] = scene_vertices[:, 1].astype('f4')
-    vertices['z'] = scene_vertices[:, 2].astype('f4')
+    # vertices['x'] = scene_vertices[:, 0].astype('f4')
+    # vertices['y'] = scene_vertices[:, 1].astype('f4')
+    # vertices['z'] = scene_vertices[:, 2].astype('f4')
     
-    # vertices['x'] = x.astype('f4')
-    # vertices['y'] = y.astype('f4')
-    # vertices['z'] = z.astype('f4')
+    vertices['x'] = x.astype('f4')
+    vertices['y'] = y.astype('f4')
+    vertices['z'] = z.astype('f4')
     
     vertices['red'] = red.astype('u1')
     vertices['green'] = green.astype('u1')
     vertices['blue'] = blue.astype('u1')
     vertices['objectId'] = vertex_object_ids.astype('i4')
     vertices['nyu40id'] = vertex_nyu40ids.astype('i4')
-    vertices['targetId'] = np.zeros_like(x).astype('i4')
+    # vertices['targetId'] = np.zeros_like(x).astype('i4')
     # vertices['targetId'] = vertex_targetids.astype('i4')
     return vertices
 

@@ -48,9 +48,11 @@ class Scan3R3DProcessor(Base3DProcessor):
         ply_data = scan3r.load_ply_data(osp.join(self.data_dir, 'scans'), scan_id, self.label_filename)
         mesh_points = np.stack([ply_data['x'], ply_data['y'], ply_data['z']]).transpose((1, 0))
         
-        mesh = o3d.io.read_triangle_mesh(osp.join(self.data_dir, 'scans', scan_id, self.label_filename))
-        mesh_colors = np.asarray(mesh.vertex_colors)*255.0
-        mesh_colors = mesh_colors.round()
+        # mesh = o3d.io.read_triangle_mesh(osp.join(self.data_dir, 'scans', scan_id, self.label_filename))
+        # mesh_colors = np.asarray(mesh.vertex_colors)*255.0
+        # mesh_colors = mesh_colors.round()
+        mesh_colors = np.stack([ply_data['red'], ply_data['green'], ply_data['blue']]).transpose((1, 0))
+        
         
         scan_objects = [obj_data for obj_data in self.objects if obj_data['scan'] == scan_id][0]['objects']
         

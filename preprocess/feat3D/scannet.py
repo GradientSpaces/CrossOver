@@ -64,7 +64,7 @@ class Scannet3DProcessor(Base3DProcessor):
         mesh_points = mesh_vertices[:, 0:3] 
         mesh_colors  = mesh_vertices[:, 3:]
         
-        text_file = mesh_file.replace('_vh_clean_2.labels.ply' , '.txt')
+        text_file = mesh_file.replace('_vh_clean_2.ply' , '.txt')
         with open(text_file, 'r') as file:
                 for line in file:
                     if line.startswith('sceneType'):

@@ -12,7 +12,7 @@ data:
     layout_dir     : /drive/datasets/SceneCAD/
     process_dir    : ${data.process_dir}/Scannet/
     processor3D    : Scannet3DProcessor
-    mesh_subfix    : _vh_clean_2.labels.ply
+    mesh_subfix    : _vh_clean_2.ply
     seg_subfix     : _vh_clean_2.0.010000.segs.json
     aggre_subfix   : _vh_clean.aggregation.json
   

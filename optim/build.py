@@ -7,7 +7,7 @@ def build_optim(cfg, params, total_steps):
     scheduler = get_scheduler(cfg, optimizer, total_steps)
      
     if 'retrieval' in cfg.model.loss.lower():
-        loss = LOSS_REGISTRY.get(cfg.model.loss)(cfg.task.get(cfg.task.name).freeze_object_enc)
+        loss = LOSS_REGISTRY.get(cfg.model.loss)()
     else:
         loss = LOSS_REGISTRY.get(cfg.model.loss)(cfg.model.base_modality)
     

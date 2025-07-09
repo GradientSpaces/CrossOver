@@ -2,12 +2,11 @@ import torch
 from pathlib import Path
 from itertools import combinations
 from typing import Dict, Any
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from accelerate import Accelerator
 
 from evaluator.build import EVALUATOR_REGISTRY, BaseEvaluator
 from . import eval_utils
-import yaml
 
 @EVALUATOR_REGISTRY.register()
 class RetrievalEval(BaseEvaluator):
@@ -32,16 +31,6 @@ class RetrievalEval(BaseEvaluator):
             self.eval_dict[src_modality + '_' + ref_modality + '_err_top5'] = []
         
         self.eval_dict['target_metric'] = []
-        self.freeze_object_enc = self.cfg.task.get(self.cfg.task.name).freeze_object_enc
-        
-        #HOW TO LOAD GROUNDING EVAL ELEGANTLY I DONT LIKE THIS? DO WE EVEN NEED INSTANCE EVAL?
-        if not self.freeze_object_enc: 
-            # self.grounding_config_path = self.cfg.task.get(self.cfg.task.name).scene_level_grounding_eval.config_path
-            # with open(self.grounding_config_path, 'r') as f:
-            #     grounding_config = yaml.safe_load(f)
-            
-            # grounding_eval_cfg = OmegaConf.create(grounding_config)
-            self.grounding_eval = EVALUATOR_REGISTRY.get('GroundingEval')(cfg, accelerator, **kwargs)
 
     def batch_metrics(self, data_dict: Dict[str, Any]) -> Dict[str, float]:
         """Calculate retrieval metrics for a batch of embeddings."""
@@ -70,14 +59,5 @@ class RetrievalEval(BaseEvaluator):
         metrics['target_metric'] = float(sum(all_top1_metric)) / len(all_top1_metric)
         metrics['err_top1'] = float(sum(all_top1_metric)) / len(all_top1_metric)
         metrics['err_top5'] = float(sum(all_top5_metric)) / len(all_top5_metric)
-        
-        if not self.freeze_object_enc:
-            instance_data_dict = {}
-            instance_data_dict['embeddings'] = data_dict['object_modality_embeddings']
-            instance_data_dict['masks'] = data_dict['masks']
-            instance_metrics = self.grounding_eval.batch_metrics(instance_data_dict)
-            metrics['instance_target_metric'] = instance_metrics['target_metric']
-            metrics['instance_err_top1'] = instance_metrics['err_top1']
-            metrics['instance_err_top3'] = instance_metrics['err_top3']
         
         return metrics

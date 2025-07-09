@@ -11,13 +11,10 @@ LOSS_REGISTRY = Registry("loss")
 
 @LOSS_REGISTRY.register()
 class RetrievalLoss(nn.Module):
-    def __init__(self, freeze_object_encoders: bool = True):
+    def __init__(self):
         super(RetrievalLoss, self).__init__()    
         self.logit_scale = nn.Parameter((torch.ones([]) * np.log(1 / 0.07)).exp())  
-        self.freeze_object_enc = freeze_object_encoders
-        if not self.freeze_object_enc:
-            self.instance_loss = SceneWiseContrastiveLoss(base_modality='rgb')
-            
+        
     def calculate_loss(self, src_embed: torch.tensor, ref_embed: torch.tensor, mask: torch.tensor=None) -> torch.tensor:
         logit_scale = torch.clamp(self.logit_scale, max=100)
         
@@ -54,25 +51,11 @@ class RetrievalLoss(nn.Module):
                 loss = self.calculate_loss(a_embed, b_embed, mask)
             loss_dict[f'loss_{modality_type}'] = loss
 
-        scene_loss = sum(loss_dict.values())
-        loss_dict['scene_loss'] = scene_loss
+        loss_dict['total_loss'] = sum(loss_dict.values())
         
-        assert not torch.any(torch.isnan(scene_loss)), 'Loss Coming NaN!!!'
-            
-        if self.freeze_object_enc:
-            total_loss = scene_loss
-            loss_dict['total_loss'] = scene_loss
-            return total_loss, loss_dict
-        else:
-            instance_data_dict ={}
-            instance_data_dict['embeddings'] = data_dict['object_modality_embeddings']
-            instance_data_dict['masks'] = data_dict['masks']
-            instance_loss, instance_loss_dict = self.instance_loss(instance_data_dict)
-            loss_dict['instance_loss']= instance_loss
-            # loss_dict.update(instance_loss_dict)
-            total_loss = scene_loss + instance_loss
-            loss_dict['total_loss'] = total_loss
-            return total_loss, loss_dict
+        assert not torch.any(torch.isnan(loss_dict['total_loss'])), 'Loss Coming NaN!!!'
+        
+        return loss_dict['total_loss'], loss_dict
 
 class ContrastiveLoss(nn.Module):
     def __init__(self, base_modality: str):

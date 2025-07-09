@@ -15,7 +15,7 @@ class GroundingEval(BaseEvaluator):
         """Initialize the grounding evaluator with configuration and accelerator."""
         self.task_name = cfg.task.name
         
-        if 'scene' or 'unified' in self.task_name.lower():
+        if 'scene' in self.task_name.lower():
             self.eval_func = eval_utils.calculate_topK_err_batch
         elif 'object' in self.task_name.lower():
             self.eval_func = eval_utils.calculate_topK_err

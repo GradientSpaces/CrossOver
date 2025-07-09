@@ -16,8 +16,6 @@ class UnifiedTrainer(BaseTrainer):
         super().__init__(cfg)
         
         self.task_config = rgetattr(cfg.task, cfg.task.name)
-        self.freeze_object_enc = self.task_config.freeze_object_enc
-        
         
         # ckpt = '/drive/dumps/multimodal-spaces/runs/new_runs/scene_crossover_scannet+scan3r_scratch.pth'
         # self.logger.info(f"Loading Initial Weights from {ckpt}")
@@ -55,11 +53,7 @@ class UnifiedTrainer(BaseTrainer):
                 loss, loss_dict = self.loss(data_dict)
                 # calculate evaluator
                 metrics = self.evaluator['train'].batch_metrics(data_dict)
-                if self.freeze_object_enc:
-                    self.backward(loss)
-                else:
-                    self.backward(loss_dict['scene_loss'])
-                    self.backward(loss_dict['instance_loss'])
+                self.backward(loss)
                 
                 self.global_step += 1
                 

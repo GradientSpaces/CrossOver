@@ -13,6 +13,8 @@ from typing import List, Dict, Any
 from common.load_utils import load_npz_as_dict
 from ..transforms import get_transform
 from ..data_utils import pad_tensors
+from common.load_utils import load_yaml
+import albumentations as A
 
 
 class ScanObjectBase(Dataset):
@@ -101,6 +103,14 @@ class ScanBase(Dataset):
         self.split = split
         self.files_dir = osp.join(data_config.base_dir, 'files')
         
+        self.color_mean_std_path = osp.join(self.process_dir, 'color_mean_std.yaml')
+        self.color_mean_std = load_yaml(self.color_mean_std_path)
+        color_mean, color_std = (
+            tuple(self.color_mean_std["mean"]),
+            tuple(self.color_mean_std["std"]),
+        )
+        self.normalize_color = A.Normalize(mean=color_mean, std=color_std)
+        
         self.max_obj_len = data_config.max_object_len
         self.modalities = data_config.avail_modalities        
         self.voxel_size = data_config.voxel_size
@@ -140,8 +150,10 @@ class ScanBase(Dataset):
         
         # Point Cloud Data -- Scene
         points, feats, scene_label = scandata_3d['scene']['pcl_coords'], scandata_3d['scene']['pcl_feats'], scandata_3d['scene']['scene_label']
-        feats /= 255.
-        feats -= 0.5
+        pseudo_image = feats.astype(np.uint8)[np.newaxis, :, :]
+        feats = np.squeeze(self.normalize_color(image=pseudo_image)["image"])
+        # feats /= 255.
+        # feats -= 0.5
         
         if scene_label is None:
             scene_label = 'NA'

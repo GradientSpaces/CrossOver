@@ -47,7 +47,7 @@ def load_json(filename: str) -> Any:
 def load_yaml(filepath):
         with open(filepath) as f:
             # file = yaml.load(f, Loader=Loader)
-            file = yaml.load(f)
+            file = yaml.safe_load(f)
         return file
 
 def write_json(data_dict: Any, filename: str) -> None:

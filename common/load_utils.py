@@ -8,6 +8,7 @@ from typing import Any
 import torch 
 import random
 import numpy as np
+import yaml
 
 def make_dir(dir_path: str) -> None:
     """Creates a directory if it does not exist."""
@@ -42,6 +43,12 @@ def load_json(filename: str) -> Any:
     data = json.load(file)
     file.close()
     return data
+
+def load_yaml(filepath):
+        with open(filepath) as f:
+            # file = yaml.load(f, Loader=Loader)
+            file = yaml.load(f)
+        return file
 
 def write_json(data_dict: Any, filename: str) -> None:
     """Writes data to a JSON file with indentation."""

@@ -43,6 +43,13 @@ data:
     processor1D    : MultiScan1DProcessor
     skip_frames    : 1
     
+  Structured3D:
+    base_dir       : /media/sayan/internal/datasets/Structured3D/
+    process_dir    : ${data.process_dir}/Structured3D/scans
+    processor3D    : Structured3D_3DProcessor
+    processor2D    : Structured3D_2DProcessor
+    processor1D    : Structured3D_1DProcessor
+
 modality_info:
   1D  :
     feature_extractor: 

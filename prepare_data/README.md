@@ -7,6 +7,7 @@ This document provides instructions for pre-processing different datasets, inclu
 - 3RScan
 - ARKitScenes
 - MultiScan
+- Structured3D
 
 ## Prerequisites
 
@@ -25,6 +26,8 @@ Before you begin, simply activate the `crossover` conda environment.
 - **ARKitScenes**: Download ARKitScenes dataset from the [official website](https://github.com/apple/ARKitScenes).
 
 - **ShapeNet**: Download ShapenetCore dataset from the [official Huggingface release](https://huggingface.co/datasets/ShapeNet/ShapeNetCore) and unzip.
+
+- **Structured3D**: Download Structured3D dataset from the [official website](https://github.com/bertjiazheng/Structured3D).
 
 ### Download Referral and CAD annotations
 We use [SceneVerse](https://scene-verse.github.io/) for instance referrals (ScanNet, 3RScan, MultiScan, & ARKitScenes) and [Scan2CAD](https://github.com/skanti/Scan2CAD) for CAD annotations (ScanNet). Exact instructions for data setup below.
@@ -183,4 +186,65 @@ MultiScan/
     ├── test_scans.txt
     └── sceneverse  
         └── ssg_ref_rel2_template.json
+```
+
+#### Structured3D
+
+1. Download Structured3D data(bbox data + perspective_full data for all non corrupt zips), run the following scripts after making path related changes in each:
+```bash
+bash prepare_data/structured3d/unzip_data.sh
+python prepare_data/structured3d/move_data.py
+```
+This should have moved all downloaded data to one folder - Structured3D. After verifying this, we move the data into a subdirectory to be in accordance with the structure our preprocessing expects using the following commands:
+```bash
+bash prepare_data/structured3d/move2scan.sh
+```
+At this stage data should look like this:
+```
+Structured3D/
+├── scans/
+│   ├── scene_00000/
+│   │   ├── 2D_rendering (remember to move perspective instance images here from bbox zip)
+|   |   ├── annotation_3d.json
+│   │   └── bbox_3d.json
+```
+
+2. Now, we need to generate 3d pointclouds of each room across all the scenes. To do so, run the following script:
+```bash
+python3 prepare_data/structured3d/generate_ply.py --base_path PATH_TO_STRUCTURED3D/SCANS
+```
+This will generate directory 3D_rendering for each scan, with room_mesh.ply in separate folders for each room.
+
+3. We make use of referrals from sceneverse, for which we need a mapping of Structured3D object ids to Sceneverse referral target ids. We get this with the help of the following script:
+```bash
+python3 prepare_data/structured3d/uni3dscene.py base_dir PATH_TO STRUCTURED3D/SCANS --out_data_root PATH_TO STRUCTURED3D/uni3d_output --in_data_root PATH_TO STRUCTURED3D/SCANS
+```
+3. We generate roomwise floorplans for all scenes with the following script:
+```bash
+python3 prepare_data/structured3d/save_floorplan.py --path PATH_TO_STRUCTURED3D/SCANS
+```
+
+The final data organization should look like this:
+```
+Structured3D/
+├── scans/
+│   ├── scene_00000/
+│   │   ├── 2D_rendering (remember to move perspective instance images here from bbox zip)
+|   |   ├── annotation_3d.json
+│   │   └── bbox_3d.json
+│   │   └── 3D_rendering
+│   │   └── floorplans
+
+|   └── ...
+└── files
+    ├── room_types.txt
+    ├── train_scans.txt
+    ├── val_scans.txt
+    └── sceneverse  
+        └── ssg_ref_rel2_template.json
+└── uni3d_output
+    ├── annotations
+    ├── instance
+    ├── semantic_mask
+    └── points
 ```

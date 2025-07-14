@@ -122,6 +122,7 @@ See [DATA.MD](DATA.md) for detailed instructions on data download, preparation a
 | 3RScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ✅                       |          ✅                |
 | ARKitScenes       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
 | MultiScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
+| Structured3D       | `[point, rgb, referral]`      | `[point, rgb, referral, floorplan]`            |    ❌                       |          ❌                |
 
 
 > To run our demo, you only need to download generated embedding data; no need for any data preprocessing.

@@ -43,14 +43,21 @@ def get_train_scan_ids(dataset_name, base_dir):
             print(f"Warning: Train split file not found for MultiScan: {train_file}")
     
     elif dataset_name.lower() == 'arkitscenes':
-        train_file = osp.join(base_dir, 'files', 'train_Scans.txt')
+        train_file = osp.join(base_dir, 'files', 'train_scans.txt')
         if osp.exists(train_file):
             with open(train_file, 'r') as f:
                 train_scan_ids = [line.strip() for line in f.readlines()]
         else:
             print(f"Warning: Train split file not found for ARKitScenes: {train_file}")
 
-    
+    elif dataset_name.lower() == 'structured3d':
+        train_file = osp.join(base_dir, 'files', 'train_scans.txt')
+        if osp.exists(train_file):
+            with open(train_file, 'r') as f:
+                train_scan_ids = [line.strip() for line in f.readlines()]
+        else:
+            print(f"Warning: Train split file not found for Structured3D: {train_file}")
+            
     return train_scan_ids
 
 def compute_color_stats_for_dataset(dataset_name, dataset_config, train_scan_ids=None):
@@ -175,10 +182,7 @@ def main():
             continue
         if isinstance(value, dict) and 'process_dir' in value and 'base_dir' in value:
             available_datasets.append(key)
-            
-    
-    
-    # Determine which datasets to process
+        
     if args.datasets:
         datasets_to_process = [d for d in args.datasets if d in available_datasets]
         if not datasets_to_process:

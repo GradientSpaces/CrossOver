@@ -16,14 +16,25 @@ class UnifiedTrainer(BaseTrainer):
         super().__init__(cfg)
         
         self.task_config = rgetattr(cfg.task, cfg.task.name)
-        object_enc_ckpt = self.task_config.object_enc_ckpt
+        self.freeze_object_enc = self.task_config.freeze_object_enc
         
+        
+        # ckpt = '/drive/dumps/multimodal-spaces/runs/new_runs/scene_crossover_scannet+scan3r_scratch.pth'
+        # self.logger.info(f"Loading Initial Weights from {ckpt}")
+        
+        # # Load model weights from safetensors files
+        # ckpt = osp.join(ckpt, 'model.safetensors')
+        # weights = load_file(ckpt, device = str(self.accelerator.device))
+        # self.model.load_state_dict(weights)
+        # self.logger.info(f"Successfully loaded initial weights from {ckpt}")
+        
+        object_enc_ckpt = self.task_config.object_enc_ckpt
         self.logger.info(f"Loading Object Wise Modality Encoder from {str(object_enc_ckpt)}")
         # Load model weights from safetensors files
         object_enc_ckpt = osp.join(object_enc_ckpt, 'model.safetensors')
         object_enc_ckpt = load_file(object_enc_ckpt, device = str(self.accelerator.device))
         self.model.objectwise_modality_encoder.load_state_dict(object_enc_ckpt)
-        self.logger.info(f"Successfully loaded from {self.task_config.object_enc_ckpt}")
+        self.logger.info(f"Successfully loaded Object Wise Modality Encoder from {self.task_config.object_enc_ckpt}")
         
     def train_step(self, epoch: int) -> None:
         self.model.train()
@@ -44,7 +55,11 @@ class UnifiedTrainer(BaseTrainer):
                 loss, loss_dict = self.loss(data_dict)
                 # calculate evaluator
                 metrics = self.evaluator['train'].batch_metrics(data_dict)
-                self.backward(loss)
+                if self.freeze_object_enc:
+                    self.backward(loss)
+                else:
+                    self.backward(loss_dict['scene_loss'])
+                    self.backward(loss_dict['instance_loss'])
                 
                 self.global_step += 1
                 

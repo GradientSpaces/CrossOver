@@ -10,10 +10,11 @@ from .build import MODEL_REGISTRY
 
 @MODEL_REGISTRY.register()
 class UnifiedEncoder(nn.Module):
-    def __init__(self, args: DictConfig, modalities: List[str]) -> None:
+    def __init__(self, args: DictConfig, modalities: List[str], freeze_object_enc: bool) -> None:
         super().__init__()
 
         self.modalities = modalities
+        self.freeze_object_enc = freeze_object_enc
         self.out_dim = args.out_dim
         self.objectwise_modality_encoder = SceneLevelEncoder(args, self.modalities)
         
@@ -89,7 +90,10 @@ class UnifiedEncoder(nn.Module):
         
         optimizer_grouped_parameters += self.fusion.parameters()
         
-        for param in self.objectwise_modality_encoder.parameters():
-            param.requires_grad = False
+        if self.freeze_object_enc:
+            for param in self.objectwise_modality_encoder.parameters():
+                param.requires_grad = False
+        else:
+            optimizer_grouped_parameters += self.objectwise_modality_encoder.parameters()
         
         return optimizer_grouped_parameters

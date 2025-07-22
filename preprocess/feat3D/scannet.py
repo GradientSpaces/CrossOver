@@ -1,5 +1,5 @@
 import os.path as osp
-
+import os
 import numpy as np
 import torch
 from omegaconf import DictConfig
@@ -64,7 +64,7 @@ class Scannet3DProcessor(Base3DProcessor):
         mesh_points = mesh_vertices[:, 0:3] 
         mesh_colors  = mesh_vertices[:, 3:]
         
-        text_file = mesh_file.replace('_vh_clean_2.labels.ply' , '.txt')
+        text_file = mesh_file.replace('_vh_clean_2.ply' , '.txt')
         with open(text_file, 'r') as file:
                 for line in file:
                     if line.startswith('sceneType'):
@@ -79,10 +79,7 @@ class Scannet3DProcessor(Base3DProcessor):
         if len(shape_annot) > 0: 
             shape_annot = shape_annot[0]
             shape_annot_to_instance_map = scannet.get_cad_model_to_instance_mapping(instance_bboxes, shape_annot, meta_file, self.shape_dir)
-
-            render_out_dir = osp.join(scene_out_dir, 'render')
-            load_utils.ensure_dir(render_out_dir)
-            
+        
         for instance_id in unique_instance_ids:
             if instance_id == self.undefined: 
                 continue
@@ -98,11 +95,7 @@ class Scannet3DProcessor(Base3DProcessor):
                 shape_annot_instance = shape_annot_to_instance_map[instance_id]
                 object_cad_pcl = shape_annot_instance['points']
                 object_cad_embeddings[instance_id] = self.normalizeObjectPCLAndExtractFeats(object_cad_pcl)
-                
-                obj_verts, obj_faces, transform_shape = shape_annot_instance['verts'], shape_annot_instance['faces'], shape_annot_instance['transform_shape']
-                # load_utils.ensure_dir(osp.join(render_out_dir, f'{instance_id}'))
-                # render.render_multiview_images(obj_verts, obj_faces, transform_shape, osp.join(render_out_dir, f'{instance_id}'))
-        
+            
         data3D = {}    
         data3D['objects'] = {'pcl_embeddings' : object_pcl_embeddings, 'cad_embeddings': object_cad_embeddings}
         data3D['scene']   = {'pcl_coords': mesh_points[instance_ids != self.undefined], 'pcl_feats': mesh_colors[instance_ids != self.undefined], 'scene_label' : scene_label}
@@ -112,7 +105,5 @@ class Scannet3DProcessor(Base3DProcessor):
         assert len(list(object_id_to_label_id.keys())) >= len(list(object_pcl_embeddings.keys())), 'PC does not match for {}'.format(scan_id)
         assert len(list(object_id_to_label_id.keys())) >= len(list(object_cad_embeddings.keys())), 'CAD does not match for {}'.format(scan_id)
         
-        
-        
-        torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
-        torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data3D.npz'), **data3D)
+        np.savez_compressed(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'), **object_id_to_label_id_map)

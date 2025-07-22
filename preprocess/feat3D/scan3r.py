@@ -1,13 +1,12 @@
+import os
 import os.path as osp
 import open3d as o3d
 import numpy as np
 import torch
-from tqdm import tqdm
 from omegaconf import DictConfig
-from typing import Any, Dict
 
 from common import load_utils 
-from util import point_cloud, scan3r
+from util import scan3r
 
 from preprocess.build import PROCESSOR_REGISTRY
 from preprocess.feat3D.base import Base3DProcessor
@@ -43,12 +42,17 @@ class Scan3R3DProcessor(Base3DProcessor):
         self.feature_extractor = self.loadFeatureExtractor(config_3D, "3D")
     
     def compute3DFeaturesEachScan(self, scan_id: str) -> None:
+        """
+        Computes 3D features for a single scan.
+        """
         ply_data = scan3r.load_ply_data(osp.join(self.data_dir, 'scans'), scan_id, self.label_filename)
         mesh_points = np.stack([ply_data['x'], ply_data['y'], ply_data['z']]).transpose((1, 0))
         
-        mesh = o3d.io.read_triangle_mesh(osp.join(self.data_dir, 'scans', scan_id, self.label_filename))
-        mesh_colors = np.asarray(mesh.vertex_colors)*255.0
-        mesh_colors = mesh_colors.round()
+        # mesh = o3d.io.read_triangle_mesh(osp.join(self.data_dir, 'scans', scan_id, self.label_filename))
+        # mesh_colors = np.asarray(mesh.vertex_colors)*255.0
+        # mesh_colors = mesh_colors.round()
+        mesh_colors = np.stack([ply_data['red'], ply_data['green'], ply_data['blue']]).transpose((1, 0))
+        
         
         scan_objects = [obj_data for obj_data in self.objects if obj_data['scan'] == scan_id][0]['objects']
         
@@ -79,5 +83,5 @@ class Scan3R3DProcessor(Base3DProcessor):
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
             
-        torch.save(data3D, osp.join(scene_out_dir, 'data3D.pt'))
-        torch.save(object_id_to_label_id_map, osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data3D.npz'), **data3D)
+        np.savez_compressed(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'), **object_id_to_label_id_map)

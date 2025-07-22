@@ -73,7 +73,11 @@ task:
     train            : [Scannet, Scan3R, MultiScan, ARKitScenes]
     val              : [Scannet, Scan3R, MultiScan, ARKitScenes]
     object_enc_ckpt  : /drive/dumps/multimodal-spaces/runs/new_runs/instance_crossover_scannet+scan3r+multiscan+arkitscenes.pth
-    
+    freeze_object_enc : False
+    scene_level_grounding_eval:
+      name: GroundingEval
+      config_path: /home/sayan/Documents/code/multimodal-reality/CrossOver/configs/train/train_instance_crossover.yaml
+      
 trainer: UnifiedTrainer
 
 model:

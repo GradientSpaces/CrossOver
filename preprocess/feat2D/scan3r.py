@@ -7,7 +7,7 @@ from PIL import Image
 from scipy.spatial.transform import Rotation as R
 from omegaconf import DictConfig
 from typing import List, Dict, Tuple
-
+import os
 from common import load_utils
 from util import render, scan3r, visualisation
 from util import image as image_util
@@ -58,9 +58,13 @@ class Scan3R2DProcessor(Base2DProcessor):
         scene_folder = osp.join(self.data_dir, 'scans', scan_id)
         mesh_file = osp.join(scene_folder, self.label_filename.replace('.align', ''))
         
-        ply_data = scan3r.load_ply_data(self.data_dir, scene_folder, self.label_filename)
+        scene_out_dir = osp.join(self.out_dir, scan_id)
+        load_utils.ensure_dir(scene_out_dir)
+        
+        obj_id_imgs = {}        
+        ply_data = scan3r.load_ply_data(self.data_dir, scan_id, self.label_filename)
         instance_ids = ply_data['objectId']
-          
+        
         camera_info = scan3r.load_intrinsics(scene_folder)
         intrinsics = camera_info['intrinsic_mat']
         img_width = int(camera_info['width'])
@@ -74,9 +78,8 @@ class Scan3R2DProcessor(Base2DProcessor):
         
         scene = o3d.t.geometry.RaycastingScene()
         scene.add_triangles(o3d.t.geometry.TriangleMesh.from_legacy(mesh))
-         
+        
         # project 3D model
-        obj_id_imgs = {}
         for frame_idx in self.frame_pose_data[scan_id]:
             img_pose = self.frame_pose_data[scan_id][frame_idx]
             img_pose_inv = np.linalg.inv(img_pose)
@@ -87,21 +90,17 @@ class Scan3R2DProcessor(Base2DProcessor):
             )
             obj_id_imgs[frame_idx] = obj_id_map
 
-        
-        # save scene-level file for efficient loading
-        scene_out_dir = osp.join(self.out_dir, scan_id)
-        load_utils.ensure_dir(scene_out_dir)
-        
-        torch.save(obj_id_imgs, osp.join(scene_out_dir, 'gt-projection-seg.pt'))
+        np.savez_compressed(osp.join(scene_out_dir,'gt-projection-seg.npz'),**obj_id_imgs)
     
     def compute2DFeaturesEachScan(self, scan_id: str) -> None:
+        data2D = {}
         scene_folder = osp.join(self.data_dir, 'scans', scan_id)
         color_path = osp.join(scene_folder, 'sequence')
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
-        obj_id_to_label_id_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']
+        obj_id_to_label_id_map = load_utils.load_npz_as_dict(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'))['obj_id_to_label_id_map']
         
         # Multi-view Image -- Object (Embeddings)
         object_image_embeddings, object_image_votes_topK, frame_idxs = self.computeImageFeaturesAllObjectsEachScan(scene_folder, scene_out_dir, obj_id_to_label_id_map)
@@ -122,7 +121,7 @@ class Scan3R2DProcessor(Base2DProcessor):
         image_path = osp.join(scene_out_dir, 'sel_cams_on_mesh.png')
         Image.fromarray((cams_visualised_on_mesh * 255).astype(np.uint8)).save(image_path)
         
-        data2D = {}
+        
         data2D['objects'] = {'image_embeddings': object_image_embeddings, 'topK_images_votes' : object_image_votes_topK}
         data2D['scene']   = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
                                 'frame_idxs' : frame_idxs, 'sampled_cam_idxs' : sampled_frame_idxs}
@@ -131,7 +130,7 @@ class Scan3R2DProcessor(Base2DProcessor):
         floorplan_dict = {'img' : None, 'embedding' : None}
         data2D['scene']['floorplan'] = floorplan_dict
         
-        torch.save(data2D, osp.join(scene_out_dir, 'data2D.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data2D.npz'), **data2D)
     
     def computeSelectedImageFeaturesEachScan(self, scan_id: str, color_path: str, frame_idxs: List[int]) -> Tuple[np.ndarray, List[torch.tensor], np.ndarray, List[int]]:
         # Sample Camera Indexes Based on Rotation Matrix From Grid
@@ -162,7 +161,7 @@ class Scan3R2DProcessor(Base2DProcessor):
         return pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs
     
     def computeImageFeaturesAllObjectsEachScan(self, scene_folder: str, scene_out_dir: str, obj_id_to_label_id_map: dict) -> Tuple[Dict[int, Dict[int, np.ndarray]], Dict[int, List[int]], List[str]]:
-        object_anno_2D = torch.load(osp.join(scene_out_dir, 'gt-projection-seg.pt'))
+        object_anno_2D = np.load(osp.join(scene_out_dir, 'gt-projection-seg.npz'), allow_pickle=True)
         object_image_votes = {}
         
         # iterate over all frames

@@ -10,6 +10,9 @@ We list the available data used in the current version of CrossOver in the table
 | ------------ | ----------------------------- | ----------------------------------- |  -------------------------- | -------------------------- |
 | ScanNet      | `[point, rgb, cad, referral]` | `[point, rgb, floorplan, referral]` |    ❌                       |          ✅                |
 | 3RScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ✅                       |          ✅                |
+| ARKitScenes       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                      |          ✅                |
+| MultiScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
+| Structured3D       | `[point, rgb, referral]`      | `[point, rgb, referral, floorplan]`            |    ❌                       |          ❌                |
 
 
 We detail data download and release instructions for preprocessing with scripts for ScanNet + 3RScan. 
@@ -109,5 +112,97 @@ Scan3R/
 |   │   ├── object_id_to_label_id_map.pt -> Instance ID to NYU40 Label mapped
 |   │   ├── objectsDataMultimodal.pt -> object data combined from data1D.pt + data2D.pt + data3D.pt (for easier loading)
 |   │   └── sel_cams_on_mesh.png (visualisation of the cameras selected for computing RGB features per scan)
+|   └── ...
+```
+### MultiScan
+
+#### Running preprocessing scripts
+Adjust the path parameters of `MultiScan` in the config files under `configs/preprocess`. Run the following (after changing the `--config-path` in the bash file):
+
+```bash
+$ bash scripts/preprocess/process_multiscan.sh
+```
+
+Our script for MultiScan dataset performs the following additional processing:
+
+- 3D-to-2D projection for 2D segmentation and stores as `gt-projection-seg.pt` for each scan.
+
+Post running preprocessing, the data structure should look like the following:
+
+```
+MultiScan/
+├── objects_chunked/ (object data chunked into hdf5 format for instance baseline training)
+|   ├── train_objects.h5
+|   └── val_objects.h5
+├── scans/
+|   ├── scene_00000_00/
+|   │   ├── gt-projection-seg.pt -> 3D-to-2D projected data  consisting of framewise 2D instance segmentation
+|   │   ├── data1D.pt -> all 1D data + encoded (object referrals + BLIP features) 
+|   │   ├── data2D.pt -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
+|   │   ├── data2D_all_images.pt (RGB features of every image of every scan)
+|   │   ├── data3D.pt -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
+|   │   ├── object_id_to_label_id_map.pt -> Instance ID to NYU40 Label mapped
+|   │   ├── objectsDataMultimodal.pt -> object data combined from data1D.pt + data2D.pt + data3D.pt (for easier loading)
+|   │   └── sel_cams_on_mesh.png (visualisation of the cameras selected for computing RGB features per scan)
+|   └── ...
+```
+
+### ARKitScenes
+
+#### Running preprocessing scripts
+Adjust the path parameters of `ARKitScenes` in the config files under `configs/preprocess`. Run the following (after changing the `--config-path` in the bash file):
+
+```bash
+$ bash scripts/preprocess/process_arkit.sh
+```
+
+Our script for ARKitScenes dataset performs the following additional processing:
+
+- 3D-to-2D projection for 2D segmentation and stores as `gt-projection-seg.pt` for each scan.
+
+Post running preprocessing, the data structure should look like the following:
+
+```
+ARKitScenes/
+├── objects_chunked/ (object data chunked into hdf5 format for instance baseline training)
+|   ├── train_objects.h5
+|   └── val_objects.h5
+├── scans/
+|   ├── 40753679/
+|   │   ├── gt-projection-seg.pt -> 3D-to-2D projected data  consisting of framewise 2D instance segmentation
+|   │   ├── data1D.pt -> all 1D data + encoded (object referrals + BLIP features) 
+|   │   ├── data2D.pt -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
+|   │   ├── data2D_all_images.pt (RGB features of every image of every scan )
+|   │   ├── data3D.pt -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
+|   │   ├── object_id_to_label_id_map.pt -> Instance ID to NYU40 Label mapped
+|   │   ├── objectsDataMultimodal.pt -> object data combined from data1D.pt + data2D.pt + data3D.pt (for easier loading)
+|   │   └── sel_cams_on_mesh.png (visualisation of the cameras selected for computing RGB features per scan)
+|   └── ...
+```
+
+
+### Structured3D
+
+#### Running preprocessing scripts
+Adjust the path parameters of `Structured3D` in the config files under `configs/preprocess`. Run the following (after changing the `--config-path` in the bash file):
+
+```bash
+$ bash scripts/preprocess/process_structured3d.sh
+```
+
+
+```
+Structured3D/
+├── objects_chunked/ (object data chunked into hdf5 format for instance baseline training)
+|   ├── train_objects.h5
+|   └── val_objects.h5
+├── scans/
+|   ├── scene_00000_490854/
+|   │   ├── gt-projection-seg.npz -> framewise 2D instance segmentation
+|   │   ├── data1D.npz -> all 1D data + encoded (object referrals + BLIP features) 
+|   │   ├── data2D.npz -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
+|   │   ├── data3D.npz -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
+|   │   ├── object_id_to_label_id_map.npz -> Instance ID to NYU40 Label mapped
+|   │   ├── objectsDataMultimodal.npz -> object data combined from data1D.npz + data2D.npz + data3D.npz (for easier loading)
 |   └── ...
 ```

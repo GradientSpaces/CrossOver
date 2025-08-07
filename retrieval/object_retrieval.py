@@ -293,6 +293,6 @@ class ObjectRetrieval():
         # Object Retrieval Evaluation
         self.eval(output_dict)
         
-        self.logger.info('Scene Retrieval Evaluation (Instance Baseline)...')
+        self.logger.info('Scene Retrieval Evaluation (Instance CrossOver)...')
         # Scene Retrieval Evaluation
         self.scene_eval(output_dict)

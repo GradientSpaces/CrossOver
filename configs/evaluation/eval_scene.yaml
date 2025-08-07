@@ -33,12 +33,31 @@ data :
     voxel_size       : 0.02
   
   Scan3R:
-    base_dir       : /drive/datasets/Scan3R/
+    base_dir       : /media/sayan/internal/datasets/Scan3R/
     process_dir    : ${data.process_dir}/Scan3R/
     processor3D    : Scan3R3DProcessor
     processor2D    : Scan3R2DProcessor
     processor1D    : Scan3R1DProcessor
     label_filename : labels.instances.align.annotated.v2.ply
+    avail_modalities : ['point', 'cad', 'rgb', 'referral']
+    max_object_len : 150
+    voxel_size     : 0.02
+
+  ARKitScenes:
+    base_dir       : /media/sayan/internal/datasets/ARKitScenes
+    process_dir    : ${data.process_dir}/ARKitScenes/
+    processor3D    : ARKitScenes3DProcessor
+    processor2D    : ARKitScenes2DProcessor
+    processor1D    : ARKitScenes1DProcessor
+    max_object_len : 150
+    voxel_size     : 0.02
+    avail_modalities : ['point', 'cad', 'rgb', 'referral']
+  MultiScan:
+    base_dir       : /media/sayan/internal/datasets/MultiScan
+    process_dir    : ${data.process_dir}/MultiScan
+    processor3D    : MultiScan3DProcessor
+    processor2D    : MultiScan2DProcessor
+    processor1D    : MultiScan1DProcessor
     avail_modalities : ['point', 'cad', 'rgb', 'referral']
     max_object_len : 150
     voxel_size     : 0.02
@@ -49,7 +68,7 @@ task:
     val                     : [Scannet]
     modalities              : ['rgb', 'point', 'cad', 'referral']
     scene_modalities        : ['rgb', 'point', 'referral', 'floorplan'] #, 'point']
-    ckpt_path               : /drive/dumps/multimodal-spaces/runs/release_runs/scene_crossover_scannet+scan3r.pth
+    ckpt_path               : /drive/dumps/multimodal-spaces/runs/release_runs/scene_crossover_scannet+scan3r+multiscan.pth
 
 inference_module: SceneRetrieval
 model: 

@@ -5,6 +5,9 @@
 This document provides instructions for pre-processing different datasets, including 
 - ScanNet
 - 3RScan
+- ARKitScenes
+- MultiScan
+- Structured3D
 
 ## Prerequisites
 
@@ -16,20 +19,19 @@ Before you begin, simply activate the `crossover` conda environment.
 #### Original Data
 - **ScanNet**: Download ScanNet v2 data from the [official website](https://github.com/ScanNet/ScanNet), we use the official training and validation split from [here](https://github.com/ScanNet/ScanNet/tree/master/Tasks/Benchmark).
 
-- **3RScan**: Download 3RScan dataset from the [official website](https://github.com/WaldJohannaU/3RScan), we use the official (full list of scan ids including reference + rescans) training split from [here](https://campar.in.tum.de/public_datasets/3RScan/train_scans.txt) and validation split from [here](https://campar.in.tum.de/public_datasets/3RScan/val_scans.txt).
-    - Download `3RScan.json` from [here](https://campar.in.tum.de/public_datasets/3RScan/3RScan.json) and `objects.json` from [here](https://campar.in.tum.de/public_datasets/3DSSG/3DSSG/objects.json).
-    - Download the class mapping file `3RScan.v2 Semantic Classes - Mapping.csv` from [here](https://docs.google.com/spreadsheets/d/1eRTJ2M9OHz7ypXfYD-KTR1AIT-CrVLmhJf8mxgVZWnI/edit?gid=0#gid=0).
+- **3RScan**: Download 3RScan dataset from the [official website](https://github.com/WaldJohannaU/3RScan).
+
+- **MultiScan**: Download MultiScan dataset from the [official website](https://github.com/smartscenes/multiscan).
+
+- **ARKitScenes**: Download ARKitScenes dataset from the [official website](https://github.com/apple/ARKitScenes).
 
 - **ShapeNet**: Download ShapenetCore dataset from the [official Huggingface release](https://huggingface.co/datasets/ShapeNet/ShapeNetCore) and unzip.
 
-#### Referral and CAD annotations
-We use [SceneVerse](https://scene-verse.github.io/) for instance referrals (ScanNet & 3RScan) and [Scan2CAD](https://github.com/skanti/Scan2CAD) for CAD annotations (ScanNet). 
+- **Structured3D**: Download Structured3D dataset from the [official website](https://github.com/bertjiazheng/Structured3D).
 
-- **SceneVerse** - Download the Scannet and 3RScan data under `annotations/refer` from the [official website](https://scene-verse.github.io/).
-- **Scan2CAD** - Download `full_annotations.json` from the [official website](https://github.com/skanti/Scan2CAD?tab=readme-ov-file#download-dataset).
+### Download Referral and CAD annotations
+We use [SceneVerse](https://scene-verse.github.io/) for instance referrals (ScanNet, 3RScan, MultiScan, & ARKitScenes) and [Scan2CAD](https://github.com/skanti/Scan2CAD) for CAD annotations (ScanNet). Exact instructions for data setup below.
 
-### Prepare The Data
-Exact instructions for data setup + preparation below:
 
 #### ScanNet
 1. Run the following to extract ScanNet data 
@@ -106,4 +108,143 @@ Scan3R/
     ├── val_scans.txt
     └── sceneverse  
         └── ssg_ref_rel2_template.json
+```
+
+#### ARKitScenes
+1. Download ARKitScenes 3dod data using the following command:
+
+```bash
+python ARKitScenes/download_data.py 3dod --video_id_csv PATH_TO_3dod_train_val_splits.csv --download_dir PATH_TO_ARKITSCENES
+```
+The files mentioned in the above command - ```download_data.py``` and ```3dod_train_val_splits.csv``` can be found in the official repository [here](https://github.com/apple/ARKitScenes), along with more detailed instructions and descriptions of the data.
+
+2. Once the data is downloaded, run the following to organize it as per our requirements.
+ 
+ ```bash
+cd ARKitScenes
+mv 3dod/Training/* scans
+mv 3dod/Validation/* scans
+```
+
+3. Move the relevant files from `Sceneverse` and `ARKitScenes` under `files/`.
+
+Once completed, the data structure would look like the following:
+```
+ARKitScenes/
+├── scans/
+│   ├── 40753679/
+│   │   ├── 40753679_frames/ 
+│   │   │    ├── lowres_depth/ (folder containing depth images)
+│   │   │    ├── lowres_wide/ (folder containing rgb images)
+│   │   │    ├── lowres_wide_intrinsics/ (folder containing frame wise camera intrinsics)
+│   │   │    ├── lowres_wide.traj (camera trajectory)
+│   │   ├── 40753679_3dod_annotation.json
+│   │   ├── 40753679_3dod_mesh.ply
+|   └── 
+└── files
+    ├── scannetv2-labels.combined.tsv
+    ├── train_scans.txt
+    ├── val_scans.txt
+    ├── metadata.csv
+    ├── 3dod_train_val_splits.csv
+    └── sceneverse  
+        └── ssg_ref_rel2_template.json
+```
+
+#### MultiScan
+1. Download MultiScan data into MultiScan/scenes and run the following to extract MultiScan data 
+ 
+ ```bash
+cd MultiScan/scenes
+unzip '*.zip'
+rm -rf '*.zip'
+```
+3. To generate sequence of RGB images and corresponding camera poses from the ```.mp4``` file, run the follwing
+```bash
+cd prepare_data/multiscan
+python preprocess_2d_multiscan.py --base_dir PATH_TO_MULTISCAN --frame_interval {frame_interval}
+```
+Once completed, the data structure would look like the following:
+```
+MultiScan/
+├── scenes/
+│   ├── scene_00000_00/
+│   │   ├── sequence/ (folder containing rgb images at specified frame interval)
+|   |   ├── frame_ids.txt
+│   │   ├── scene_00000_00.annotations.json
+│   │   ├── scene_00000_00.jsonl
+│   │   ├── scene_00000_00.confidence.zlib
+│   │   ├── scene_00000_00.mp4
+│   │   ├── poses.jsonl
+│   │   ├── scene_00000_00.ply
+│   │   ├── scene_00000_00.align.json
+│   │   ├── scene_00000_00.json
+|   └── 
+└── files
+    ├── scannetv2-labels.combined.tsv
+    ├── train_scans.txt
+    ├── test_scans.txt
+    └── sceneverse  
+        └── ssg_ref_rel2_template.json
+```
+
+#### Structured3D
+
+1. Download Structured3D data(bbox data + perspective_full data for all non corrupt zips), run the following scripts after making path related changes in each:
+```bash
+bash prepare_data/structured3d/unzip_data.sh
+python prepare_data/structured3d/move_data.py
+```
+This should have moved all downloaded data to one folder - Structured3D. After verifying this, we move the data into a subdirectory to be in accordance with the structure our preprocessing expects using the following commands:
+```bash
+bash prepare_data/structured3d/move2scan.sh
+```
+At this stage data should look like this:
+```
+Structured3D/
+├── scans/
+│   ├── scene_00000/
+│   │   ├── 2D_rendering (remember to move perspective instance images here from bbox zip)
+|   |   ├── annotation_3d.json
+│   │   └── bbox_3d.json
+```
+
+2. Now, we need to generate 3d pointclouds of each room across all the scenes. To do so, run the following script:
+```bash
+python3 prepare_data/structured3d/generate_ply.py --base_path PATH_TO_STRUCTURED3D/SCANS
+```
+This will generate directory 3D_rendering for each scan, with room_mesh.ply in separate folders for each room.
+
+3. We make use of referrals from sceneverse, for which we need a mapping of Structured3D object ids to Sceneverse referral target ids. We get this with the help of the following script:
+```bash
+python3 prepare_data/structured3d/uni3dscene.py base_dir PATH_TO STRUCTURED3D/SCANS --out_data_root PATH_TO STRUCTURED3D/uni3d_output --in_data_root PATH_TO STRUCTURED3D/SCANS
+```
+3. We generate roomwise floorplans for all scenes with the following script:
+```bash
+python3 prepare_data/structured3d/save_floorplan.py --path PATH_TO_STRUCTURED3D/SCANS
+```
+
+The final data organization should look like this:
+```
+Structured3D/
+├── scans/
+│   ├── scene_00000/
+│   │   ├── 2D_rendering (remember to move perspective instance images here from bbox zip)
+|   |   ├── annotation_3d.json
+│   │   └── bbox_3d.json
+│   │   └── 3D_rendering
+│   │   └── floorplans
+
+|   └── ...
+└── files
+    ├── room_types.txt
+    ├── train_scans.txt
+    ├── val_scans.txt
+    └── sceneverse  
+        └── ssg_ref_rel2_template.json
+└── uni3d_output
+    ├── annotations
+    ├── instance
+    ├── semantic_mask
+    └── points
 ```

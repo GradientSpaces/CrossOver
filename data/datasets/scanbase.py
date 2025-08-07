@@ -10,8 +10,10 @@ from copy import deepcopy
 from omegaconf import DictConfig
 from typing import List, Dict, Any
 
+from common.load_utils import load_npz_as_dict
 from ..transforms import get_transform
 from ..data_utils import pad_tensors
+
 
 class ScanObjectBase(Dataset):
     """Base Dataset class for instance level training"""
@@ -131,11 +133,10 @@ class ScanBase(Dataset):
         
         scan_process_dir = osp.join(self.process_dir, 'scans', scan_id)
         
-        scan_objects_data = torch.load(osp.join(scan_process_dir, 'objectsDataMultimodal.pt'))
-        
-        scandata_1d = torch.load(osp.join(scan_process_dir, 'data1D.pt'))
-        scandata_2d = torch.load(osp.join(scan_process_dir, 'data2D.pt'))
-        scandata_3d = torch.load(osp.join(scan_process_dir, 'data3D.pt'))
+        scan_objects_data = load_npz_as_dict(osp.join(scan_process_dir, 'objectsDataMultimodal.npz'))
+        scandata_1d = load_npz_as_dict(osp.join(scan_process_dir, 'data1D.npz'))
+        scandata_2d = load_npz_as_dict(osp.join(scan_process_dir, 'data2D.npz'))
+        scandata_3d = load_npz_as_dict(osp.join(scan_process_dir, 'data3D.npz'))
         
         # Point Cloud Data -- Scene
         points, feats, scene_label = scandata_3d['scene']['pcl_coords'], scandata_3d['scene']['pcl_feats'], scandata_3d['scene']['scene_label']
@@ -152,9 +153,9 @@ class ScanBase(Dataset):
         _, sel = ME.utils.sparse_quantize(points / self.voxel_size, return_index=True)
         coords, feats = points[sel], feats[sel]
         
-        # Get coords, shift to center
+        # Get coords
         coords = np.floor(coords / self.voxel_size)
-        coords-=coords.min(0)
+        coords -= coords.min(0)
         
         # Object Data
         scene_dict = {}

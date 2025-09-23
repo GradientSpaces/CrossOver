@@ -1,5 +1,4 @@
 import os.path as osp
-import torch
 import numpy as np
 from common import load_utils 
 from util import scan3r
@@ -32,10 +31,12 @@ class Scan3R1DProcessor(Base1DProcessor):
         self.undefined = 0
     
     def compute1DFeaturesEachScan(self, scan_id: str) -> None:
+        data1D = {}
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
-        objectID_to_labelID_map = torch.load(osp.join(scene_out_dir, 'object_id_to_label_id_map.pt'))['obj_id_to_label_id_map']        
+        npz_data = load_utils.load_npz_as_dict(osp.join(scene_out_dir, 'object_id_to_label_id_map.npz'))
+        objectID_to_labelID_map = npz_data['obj_id_to_label_id_map']
         scan_objects = [obj_data for obj_data in self.objects if obj_data['scan'] == scan_id][0]['objects']
 
         object_referral_embeddings, scene_referral_embeddings = {}, None
@@ -53,11 +54,11 @@ class Scan3R1DProcessor(Base1DProcessor):
             scene_referral_embeddings = self.extractTextFeats([scene_referrals], return_text=True)            
             assert scene_referral_embeddings is not None
         
-        data1D = {}
         data1D['objects'] = {'referral_embeddings' : object_referral_embeddings}
         data1D['scene']   = {'referral_embedding': scene_referral_embeddings}
+            
+        np.savez_compressed(osp.join(scene_out_dir, 'data1D.npz'), **data1D)
         
-        torch.save(data1D, osp.join(scene_out_dir, 'data1D.pt'))
              
     def computeObjectWise1DFeaturesEachScan(self, scan_id: str, scan_objects: Dict, 
                                             objectID_to_labelID_map: Dict[int, int]) -> Dict[int, Dict[str, Union[List[str], np.ndarray]]]:

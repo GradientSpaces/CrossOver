@@ -33,7 +33,7 @@ data :
     voxel_size       : 0.02
   
   Scan3R:
-    base_dir       : /drive/datasets/Scan3R/
+    base_dir       : /media/sayan/internal/datasets/Scan3R/
     process_dir    : ${data.process_dir}/Scan3R/
     chunked_dir    : ${data.process_dir}/Scan3R/objects_chunked
     processor3D    : Scan3R3DProcessor
@@ -44,14 +44,36 @@ data :
     max_object_len : 150
     voxel_size     : 0.02
 
+  ARKitScenes:
+    base_dir       : /media/sayan/internal/datasets/ARKitScenes
+    process_dir    : ${data.process_dir}/ARKitScenes/
+    chunked_dir    : ${data.process_dir}/ARKitScenes/objects_chunked
+    processor3D    : ARKitScenes3DProcessor
+    processor2D    : ARKitScenes2DProcessor
+    processor1D    : ARKitScenes1DProcessor
+    avail_modalities : ['point', 'cad', 'rgb', 'referral']
+    max_object_len : 150
+    voxel_size     : 0.02
+    
+  MultiScan:
+    base_dir       : /media/sayan/internal/datasets/MultiScan
+    process_dir    : ${data.process_dir}/MultiScan/
+    chunked_dir    : ${data.process_dir}/MultiScan/objects_chunked
+    processor3D    : MultiScan3DProcessor
+    processor2D    : MultiScan2DProcessor
+    processor1D    : MultiScan1DProcessor
+    avail_modalities : ['point', 'cad', 'rgb', 'referral']
+    max_object_len   : 150
+    voxel_size       : 0.02
+    
 task: 
   name         : UnifiedTrain 
   UnifiedTrain :
     modalities       : ['rgb', 'point', 'cad', 'referral']
     scene_modalities : ['rgb', 'point', 'floorplan', 'referral']
-    train            : [Scannet, Scan3R, MultiScan]
-    val              : [Scannet, Scan3R, MultiScan]
-    object_enc_ckpt  : /drive/dumps/multimodal-spaces/runs/release_runs/instance_crossover_scannet+scan3r+multiscan.pth
+    train            : [Scannet, Scan3R, MultiScan, ARKitScenes]
+    val              : [Scannet, Scan3R, MultiScan, ARKitScenes]
+    object_enc_ckpt  : /drive/dumps/multimodal-spaces/runs/new_runs/instance_crossover_scannet+scan3r+multiscan+arkitscenes.pth
     
 trainer: UnifiedTrainer
 

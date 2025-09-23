@@ -3,30 +3,31 @@ import open3d as o3d
 import numpy as np
 import torch
 from tqdm import tqdm
+import shutil
 from PIL import Image
 from scipy.spatial.transform import Rotation as R
 from omegaconf import DictConfig
 from typing import List, Dict, Tuple
-import os
+import pandas as pd
 from common import load_utils
-from util import render, scan3r, visualisation
+from util import render, arkit, visualisation
 from util import image as image_util
-
+import os
 
 from preprocess.build import PROCESSOR_REGISTRY
 from preprocess.feat2D.base import Base2DProcessor
 
 @PROCESSOR_REGISTRY.register()
-class Scan3R2DProcessor(Base2DProcessor):
-    """Scan3R 2D (RGB) feature processor class."""
+class ARKitScenes2DProcessor(Base2DProcessor):
+    """ARKitScenes 2D (RGB) feature processor class."""
     def __init__(self, config_data: DictConfig, config_2D: DictConfig, split: str) -> None:
-        super(Scan3R2DProcessor, self).__init__(config_data, config_2D, split)
+        super(ARKitScenes2DProcessor, self).__init__(config_data, config_2D, split)
         self.data_dir = config_data.base_dir
         files_dir = osp.join(config_data.base_dir, 'files')
         
         self.scan_ids = []
         self.split = split
-        self.scan_ids = scan3r.get_scan_ids(files_dir, self.split)
+        self.scan_ids = arkit.get_scan_ids(files_dir, self.split)
         
         self.out_dir = osp.join(config_data.process_dir, 'scans')
         load_utils.ensure_dir(self.out_dir)
@@ -38,38 +39,33 @@ class Scan3R2DProcessor(Base2DProcessor):
         self.top_k = config_2D.image.top_k
         self.num_levels = config_2D.image.num_levels
         self.undefined = 0
-        
-        self.label_filename = config_data.label_filename
-        
-        # get frame_indexes
+        self.metadata = pd.read_csv(osp.join(files_dir,'metadata.csv'))
+         
         self.frame_pose_data = {}
         for scan_id in self.scan_ids:
-            scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-            frame_idxs = scan3r.load_frame_idxs(scene_folder)
-            pose_data = scan3r.load_all_poses(scene_folder, frame_idxs)
+            pose_data = arkit.load_poses(osp.join(self.data_dir, 'scans', scan_id),scan_id, skip=self.frame_skip)
             self.frame_pose_data[scan_id] = pose_data
 
     def compute2DFeatures(self) -> None:
         for scan_id in tqdm(self.scan_ids):
             self.compute2DImagesAndSeg(scan_id)
-            self.compute2DFeaturesEachScan(scan_id)   
-
+            self.compute2DFeaturesEachScan(scan_id)    
+    
     def compute2DImagesAndSeg(self, scan_id: str) -> None:
-        scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-        mesh_file = osp.join(scene_folder, self.label_filename.replace('.align', ''))
+        obj_id_imgs = {}
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
-        obj_id_imgs = {}        
-        ply_data = scan3r.load_ply_data(self.data_dir, scan_id, self.label_filename)
+        objects_path = osp.join(self.data_dir, 'scans', scan_id, f"{scan_id}_3dod_annotation.json")
+        if not osp.exists(objects_path):
+            raise FileNotFoundError(f"Annotations file not found for scan ID: {scan_id}")
+    
+        annotations = load_utils.load_json(objects_path)        
+        ply_data = arkit.load_ply_data(osp.join(self.data_dir,'scans'), scan_id, annotations)
         instance_ids = ply_data['objectId']
         
-        camera_info = scan3r.load_intrinsics(scene_folder)
-        intrinsics = camera_info['intrinsic_mat']
-        img_width = int(camera_info['width'])
-        img_height = int(camera_info['height'])
-        
+        mesh_file = osp.join(self.data_dir, 'scans', scan_id, f'{scan_id}_3dod_mesh.ply')
         mesh = o3d.io.read_triangle_mesh(mesh_file)
         mesh_triangles = np.asarray(mesh.triangles)
         colors = np.asarray(mesh.vertex_colors)*255.0
@@ -80,7 +76,11 @@ class Scan3R2DProcessor(Base2DProcessor):
         scene.add_triangles(o3d.t.geometry.TriangleMesh.from_legacy(mesh))
         
         # project 3D model
-        for frame_idx in self.frame_pose_data[scan_id]:
+        for frame_idx in self.frame_pose_data[scan_id].keys():
+            camera_info = arkit.load_intrinsics(osp.join(self.data_dir,'scans'),scan_id,frame_idx)
+            intrinsics = camera_info['intrinsic_mat']
+            img_width = int(camera_info['width'])
+            img_height = int(camera_info['height'])
             img_pose = self.frame_pose_data[scan_id][frame_idx]
             img_pose_inv = np.linalg.inv(img_pose)
             
@@ -94,8 +94,9 @@ class Scan3R2DProcessor(Base2DProcessor):
     
     def compute2DFeaturesEachScan(self, scan_id: str) -> None:
         data2D = {}
+        
         scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-        color_path = osp.join(scene_folder, 'sequence')
+        color_path = osp.join(scene_folder,f'{scan_id}_frames', 'lowres_wide')
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
@@ -110,17 +111,18 @@ class Scan3R2DProcessor(Base2DProcessor):
         pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs = self.computeSelectedImageFeaturesEachScan(scan_id, color_path, frame_idxs)
         
         # Visualise
-        camera_info = scan3r.load_intrinsics(scene_folder)
-        intrinsic_mat = camera_info['intrinsic_mat']
+        for frame_idx in self.frame_pose_data[scan_id].keys():
+            camera_info = arkit.load_intrinsics(osp.join(self.data_dir,'scans'),scan_id,frame_idx)
+            intrinsic_mat = camera_info['intrinsic_mat']
+            break
         
-        scene_mesh = o3d.io.read_triangle_mesh(osp.join(scene_folder, self.label_filename.replace('.align', '')))
+        scene_mesh = o3d.io.read_triangle_mesh(osp.join(scene_folder, f'{scan_id}_3dod_mesh.ply'))
         intrinsics = { 'f' : intrinsic_mat[0, 0], 'cx' : intrinsic_mat[0, 2], 'cy' : intrinsic_mat[1, 2], 
                         'w' : int(camera_info['width']), 'h' : int(camera_info['height'])}
         
         cams_visualised_on_mesh = visualisation.visualise_camera_on_mesh(scene_mesh, pose_data[sampled_frame_idxs], intrinsics, stride=1)
         image_path = osp.join(scene_out_dir, 'sel_cams_on_mesh.png')
         Image.fromarray((cams_visualised_on_mesh * 255).astype(np.uint8)).save(image_path)
-        
         
         data2D['objects'] = {'image_embeddings': object_image_embeddings, 'topK_images_votes' : object_image_votes_topK}
         data2D['scene']   = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
@@ -144,14 +146,14 @@ class Scan3R2DProcessor(Base2DProcessor):
         pose_data = np.array(pose_data)
         
         sampled_frame_idxs = image_util.sample_camera_pos_on_grid(pose_data)
+        # sky_direction=self.metadata[self.metadata['video_id']==int(scan_id)]['sky_direction'].values[0]
         
         # Extract Scene Image Features
         scene_images_pt = []
         for idx in sampled_frame_idxs:
             frame_index = frame_idxs[idx]
             
-            image = Image.open(osp.join(color_path, f'frame-{frame_index}.color.jpg'))
-            image = image.transpose(Image.ROTATE_270)
+            image = Image.open(osp.join(color_path, f'{scan_id}_{frame_index}.png'))
             image = image.resize((self.model_image_size[1], self.model_image_size[0]), Image.BICUBIC)
             image_pt = self.model.base_tf(image)
             scene_images_pt.append(image_pt)
@@ -159,11 +161,11 @@ class Scan3R2DProcessor(Base2DProcessor):
         scene_image_embeddings = self.extractFeatures(scene_images_pt, return_only_cls_mean= False)
         
         return pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs
-    
-    def computeImageFeaturesAllObjectsEachScan(self, scene_folder: str, scene_out_dir: str, obj_id_to_label_id_map: dict) -> Tuple[Dict[int, Dict[int, np.ndarray]], Dict[int, List[int]], List[str]]:
-        object_anno_2D = np.load(osp.join(scene_out_dir, 'gt-projection-seg.npz'), allow_pickle=True)
-        object_image_votes = {}
         
+    def computeImageFeaturesAllObjectsEachScan(self, scene_folder: str, scene_out_dir: str, obj_id_to_label_id_map: dict) -> Tuple[Dict[int, Dict[int, np.ndarray]], Dict[int, List[int]], List[str]]:
+        object_anno_2D = np.load(osp.join(scene_out_dir, 'gt-projection-seg.npz'),allow_pickle=True)
+        object_image_votes = {}
+        scan_id=scene_folder.split('/')[-1]
         # iterate over all frames
         for frame_idx in object_anno_2D:
             obj_2D_anno_frame = object_anno_2D[frame_idx]
@@ -205,18 +207,16 @@ class Scan3R2DProcessor(Base2DProcessor):
             object_image_embeddings[object_id] = {}
             
             for frame_idx in object_image_votes_topK_frames:
-                image_path = osp.join(scene_folder, 'sequence', f'frame-{frame_idx}.color.jpg')
+                image_path = osp.join(scene_folder, f'{scan_id}_frames', 'lowres_wide', f'{scan_id}_{frame_idx}.png')
                 color_img = Image.open(image_path)
-                object_image_embeddings[object_id][frame_idx] = self.computeImageFeaturesEachObject(color_img, object_id, object_anno_2D[frame_idx])
+                object_image_embeddings[object_id][frame_idx] = self.computeImageFeaturesEachObject(scan_id, color_img, object_id, object_anno_2D[frame_idx])
 
         return object_image_embeddings, object_image_votes_topK, object_anno_2D.keys()
     
-    def computeImageFeaturesEachObject(self, image: Image.Image, object_id: int, object_anno_2d: np.ndarray) -> np.ndarray:
+    def computeImageFeaturesEachObject(self, scan_id, image: Image.Image, object_id: int, object_anno_2d: np.ndarray) -> np.ndarray:
         object_anno_2d = object_anno_2d.transpose(1, 0)
         object_anno_2d = np.flip(object_anno_2d, 1)
         
-        # load image
-        image = image.transpose(Image.ROTATE_270)
         object_mask = object_anno_2d == object_id
         
         images_crops = []

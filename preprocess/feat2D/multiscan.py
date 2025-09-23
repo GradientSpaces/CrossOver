@@ -5,28 +5,25 @@ import torch
 from tqdm import tqdm
 from PIL import Image
 from scipy.spatial.transform import Rotation as R
-from omegaconf import DictConfig
-from typing import List, Dict, Tuple
 import os
 from common import load_utils
-from util import render, scan3r, visualisation
+from util import render, multiscan, visualisation
 from util import image as image_util
-
 
 from preprocess.build import PROCESSOR_REGISTRY
 from preprocess.feat2D.base import Base2DProcessor
 
+
 @PROCESSOR_REGISTRY.register()
-class Scan3R2DProcessor(Base2DProcessor):
-    """Scan3R 2D (RGB) feature processor class."""
-    def __init__(self, config_data: DictConfig, config_2D: DictConfig, split: str) -> None:
-        super(Scan3R2DProcessor, self).__init__(config_data, config_2D, split)
+class MultiScan2DProcessor(Base2DProcessor):
+    def __init__(self, config_data, config_2D, split) -> None:
+        super(MultiScan2DProcessor, self).__init__(config_data, config_2D, split)
         self.data_dir = config_data.base_dir
         files_dir = osp.join(config_data.base_dir, 'files')
+        self.split = split
         
         self.scan_ids = []
-        self.split = split
-        self.scan_ids = scan3r.get_scan_ids(files_dir, self.split)
+        self.scan_ids = multiscan.get_scan_ids(files_dir, split)
         
         self.out_dir = osp.join(config_data.process_dir, 'scans')
         load_utils.ensure_dir(self.out_dir)
@@ -39,36 +36,35 @@ class Scan3R2DProcessor(Base2DProcessor):
         self.num_levels = config_2D.image.num_levels
         self.undefined = 0
         
-        self.label_filename = config_data.label_filename
         
         # get frame_indexes
         self.frame_pose_data = {}
         for scan_id in self.scan_ids:
-            scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-            frame_idxs = scan3r.load_frame_idxs(scene_folder)
-            pose_data = scan3r.load_all_poses(scene_folder, frame_idxs)
+            scene_folder = osp.join(self.data_dir, 'scenes', scan_id)
+            frame_idxs = multiscan.load_frame_idxs(scene_folder, skip=self.frame_skip)
+            while(len(frame_idxs) > 500):
+                self.frame_skip += 2
+                frame_idxs = multiscan.load_frame_idxs(scene_folder, skip=self.frame_skip)
+            
+            pose_data = multiscan.load_all_poses(scene_folder, frame_idxs)
             self.frame_pose_data[scan_id] = pose_data
 
-    def compute2DFeatures(self) -> None:
+
+    def compute2DFeatures(self):
         for scan_id in tqdm(self.scan_ids):
             self.compute2DImagesAndSeg(scan_id)
-            self.compute2DFeaturesEachScan(scan_id)   
-
-    def compute2DImagesAndSeg(self, scan_id: str) -> None:
-        scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-        mesh_file = osp.join(scene_folder, self.label_filename.replace('.align', ''))
+            self.compute2DFeaturesEachScan(scan_id)
+    
+    def compute2DImagesAndSeg(self, scan_id):
+        scene_folder = osp.join(self.data_dir, 'scenes', scan_id)
+        obj_id_imgs = {}
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
-        obj_id_imgs = {}        
-        ply_data = scan3r.load_ply_data(self.data_dir, scan_id, self.label_filename)
+        mesh_file = osp.join(scene_folder, '{}.ply'.format(scan_id))
+        ply_data = multiscan.load_ply_data(osp.join(self.data_dir, 'scenes'), scan_id)
         instance_ids = ply_data['objectId']
-        
-        camera_info = scan3r.load_intrinsics(scene_folder)
-        intrinsics = camera_info['intrinsic_mat']
-        img_width = int(camera_info['width'])
-        img_height = int(camera_info['height'])
         
         mesh = o3d.io.read_triangle_mesh(mesh_file)
         mesh_triangles = np.asarray(mesh.triangles)
@@ -81,6 +77,10 @@ class Scan3R2DProcessor(Base2DProcessor):
         
         # project 3D model
         for frame_idx in self.frame_pose_data[scan_id]:
+            camera_info = multiscan.load_intrinsics(scene_folder,scan_id,int(frame_idx))
+            intrinsics = camera_info['intrinsic_mat']
+            img_width = int(camera_info['width'])
+            img_height = int(camera_info['height'])
             img_pose = self.frame_pose_data[scan_id][frame_idx]
             img_pose_inv = np.linalg.inv(img_pose)
             
@@ -92,11 +92,11 @@ class Scan3R2DProcessor(Base2DProcessor):
 
         np.savez_compressed(osp.join(scene_out_dir,'gt-projection-seg.npz'),**obj_id_imgs)
     
-    def compute2DFeaturesEachScan(self, scan_id: str) -> None:
+    def compute2DFeaturesEachScan(self, scan_id):
         data2D = {}
-        scene_folder = osp.join(self.data_dir, 'scans', scan_id)
-        color_path = osp.join(scene_folder, 'sequence')
         
+        scene_folder = osp.join(self.data_dir, 'scenes', scan_id)
+        color_path = osp.join(scene_folder, 'sequence')
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
@@ -110,17 +110,16 @@ class Scan3R2DProcessor(Base2DProcessor):
         pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs = self.computeSelectedImageFeaturesEachScan(scan_id, color_path, frame_idxs)
         
         # Visualise
-        camera_info = scan3r.load_intrinsics(scene_folder)
+        camera_info = multiscan.load_meta_intrinsics(scene_folder,scan_id)
         intrinsic_mat = camera_info['intrinsic_mat']
         
-        scene_mesh = o3d.io.read_triangle_mesh(osp.join(scene_folder, self.label_filename.replace('.align', '')))
+        scene_mesh = o3d.io.read_triangle_mesh(osp.join(scene_folder,'{}.ply'.format(scan_id)))
         intrinsics = { 'f' : intrinsic_mat[0, 0], 'cx' : intrinsic_mat[0, 2], 'cy' : intrinsic_mat[1, 2], 
                         'w' : int(camera_info['width']), 'h' : int(camera_info['height'])}
         
         cams_visualised_on_mesh = visualisation.visualise_camera_on_mesh(scene_mesh, pose_data[sampled_frame_idxs], intrinsics, stride=1)
         image_path = osp.join(scene_out_dir, 'sel_cams_on_mesh.png')
         Image.fromarray((cams_visualised_on_mesh * 255).astype(np.uint8)).save(image_path)
-        
         
         data2D['objects'] = {'image_embeddings': object_image_embeddings, 'topK_images_votes' : object_image_votes_topK}
         data2D['scene']   = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
@@ -129,15 +128,15 @@ class Scan3R2DProcessor(Base2DProcessor):
         # dummy floorplan
         floorplan_dict = {'img' : None, 'embedding' : None}
         data2D['scene']['floorplan'] = floorplan_dict
-        
+            
         np.savez_compressed(osp.join(scene_out_dir, 'data2D.npz'), **data2D)
     
-    def computeSelectedImageFeaturesEachScan(self, scan_id: str, color_path: str, frame_idxs: List[int]) -> Tuple[np.ndarray, List[torch.tensor], np.ndarray, List[int]]:
+    def computeSelectedImageFeaturesEachScan(self, scan_id, color_path, frame_idxs):
         # Sample Camera Indexes Based on Rotation Matrix From Grid
         pose_data = []
         for frame_idx in frame_idxs:
             pose = self.frame_pose_data[scan_id][frame_idx]
-            rot_quat = R.from_matrix(pose[:3, :3]).as_quat()
+            rot_quat = R.from_matrix(pose[:3, :3]).as_quat()  
             trans = pose[:3, 3]
             pose_data.append([trans[0], trans[1], trans[2], rot_quat[0], rot_quat[1], rot_quat[2], rot_quat[3]])
             
@@ -151,17 +150,17 @@ class Scan3R2DProcessor(Base2DProcessor):
             frame_index = frame_idxs[idx]
             
             image = Image.open(osp.join(color_path, f'frame-{frame_index}.color.jpg'))
-            image = image.transpose(Image.ROTATE_270)
             image = image.resize((self.model_image_size[1], self.model_image_size[0]), Image.BICUBIC)
             image_pt = self.model.base_tf(image)
             scene_images_pt.append(image_pt)
-        
+            
         scene_image_embeddings = self.extractFeatures(scene_images_pt, return_only_cls_mean= False)
-        
+
         return pose_data, scene_images_pt, scene_image_embeddings, sampled_frame_idxs
     
-    def computeImageFeaturesAllObjectsEachScan(self, scene_folder: str, scene_out_dir: str, obj_id_to_label_id_map: dict) -> Tuple[Dict[int, Dict[int, np.ndarray]], Dict[int, List[int]], List[str]]:
-        object_anno_2D = np.load(osp.join(scene_out_dir, 'gt-projection-seg.npz'), allow_pickle=True)
+    def computeImageFeaturesAllObjectsEachScan(self, scene_folder, scene_out_dir, obj_id_to_label_id_map):
+        object_anno_2D = np.load(osp.join(scene_out_dir, 'gt-projection-seg.npz'),allow_pickle=True)
+        
         object_image_votes = {}
         
         # iterate over all frames
@@ -211,12 +210,8 @@ class Scan3R2DProcessor(Base2DProcessor):
 
         return object_image_embeddings, object_image_votes_topK, object_anno_2D.keys()
     
-    def computeImageFeaturesEachObject(self, image: Image.Image, object_id: int, object_anno_2d: np.ndarray) -> np.ndarray:
-        object_anno_2d = object_anno_2d.transpose(1, 0)
-        object_anno_2d = np.flip(object_anno_2d, 1)
-        
+    def computeImageFeaturesEachObject(self, image, object_id, object_anno_2d):
         # load image
-        image = image.transpose(Image.ROTATE_270)
         object_mask = object_anno_2d == object_id
         
         images_crops = []
@@ -227,6 +222,7 @@ class Scan3R2DProcessor(Base2DProcessor):
             cropped_img = cropped_img.resize((self.model_image_size[1], self.model_image_size[1]), Image.BICUBIC)
             img_pt = self.model.base_tf(cropped_img)
             images_crops.append(img_pt)
+            
         
         if(len(images_crops) > 0):
             mean_feats = self.extractFeatures(images_crops, return_only_cls_mean = True)

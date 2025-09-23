@@ -1,0 +1,1 @@
+python3 preprocess/calculate_color_stats.py --config-path /Users/gauravpradeep/CrossOver_ScaleUp/configs/preprocess --config-name process_3d.yaml --datasets Scannet Scan3R ARKitScenes MultiScan

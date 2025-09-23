@@ -10,8 +10,12 @@ from copy import deepcopy
 from omegaconf import DictConfig
 from typing import List, Dict, Any
 
+from common.load_utils import load_npz_as_dict
 from ..transforms import get_transform
 from ..data_utils import pad_tensors
+from common.load_utils import load_yaml
+import albumentations as A
+
 
 class ScanObjectBase(Dataset):
     """Base Dataset class for instance level training"""
@@ -99,6 +103,14 @@ class ScanBase(Dataset):
         self.split = split
         self.files_dir = osp.join(data_config.base_dir, 'files')
         
+        self.color_mean_std_path = osp.join(self.process_dir, 'color_mean_std.yaml')
+        self.color_mean_std = load_yaml(self.color_mean_std_path)
+        color_mean, color_std = (
+            tuple(self.color_mean_std["mean"]),
+            tuple(self.color_mean_std["std"]),
+        )
+        self.normalize_color = A.Normalize(mean=color_mean, std=color_std)
+        
         self.max_obj_len = data_config.max_object_len
         self.modalities = data_config.avail_modalities        
         self.voxel_size = data_config.voxel_size
@@ -131,16 +143,15 @@ class ScanBase(Dataset):
         
         scan_process_dir = osp.join(self.process_dir, 'scans', scan_id)
         
-        scan_objects_data = torch.load(osp.join(scan_process_dir, 'objectsDataMultimodal.pt'))
-        
-        scandata_1d = torch.load(osp.join(scan_process_dir, 'data1D.pt'))
-        scandata_2d = torch.load(osp.join(scan_process_dir, 'data2D.pt'))
-        scandata_3d = torch.load(osp.join(scan_process_dir, 'data3D.pt'))
+        scan_objects_data = load_npz_as_dict(osp.join(scan_process_dir, 'objectsDataMultimodal.npz'))
+        scandata_1d = load_npz_as_dict(osp.join(scan_process_dir, 'data1D.npz'))
+        scandata_2d = load_npz_as_dict(osp.join(scan_process_dir, 'data2D.npz'))
+        scandata_3d = load_npz_as_dict(osp.join(scan_process_dir, 'data3D.npz'))
         
         # Point Cloud Data -- Scene
         points, feats, scene_label = scandata_3d['scene']['pcl_coords'], scandata_3d['scene']['pcl_feats'], scandata_3d['scene']['scene_label']
-        feats /= 255.
-        feats -= 0.5
+        pseudo_image = feats.astype(np.uint8)[np.newaxis, :, :]
+        feats = np.squeeze(self.normalize_color(image=pseudo_image)["image"])
         
         if scene_label is None:
             scene_label = 'NA'
@@ -152,9 +163,9 @@ class ScanBase(Dataset):
         _, sel = ME.utils.sparse_quantize(points / self.voxel_size, return_index=True)
         coords, feats = points[sel], feats[sel]
         
-        # Get coords, shift to center
+        # Get coords
         coords = np.floor(coords / self.voxel_size)
-        coords-=coords.min(0)
+        coords -= coords.min(0)
         
         # Object Data
         scene_dict = {}

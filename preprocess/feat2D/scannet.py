@@ -3,7 +3,7 @@ import open3d as o3d
 import numpy as np
 import torch
 from tqdm import tqdm
-
+import os
 import imageio
 import skimage.transform as sktf
 from PIL import Image
@@ -81,12 +81,14 @@ class Scannet2DProcessor(Base2DProcessor):
         return render_img
          
     def compute2DFeaturesEachScan(self, scan_id: str) -> None:
+        data2D = {}
         frame_idxs = list(self.frame_pose_data[scan_id].keys())
         scene_folder = osp.join(self.data_dir, 'scans', scan_id)
         
         scene_out_dir = osp.join(self.out_dir, scan_id)
         load_utils.ensure_dir(scene_out_dir)
         
+            
         # Floor-plan rendering
         render_img = self.renderShapeAndFloorplan(scene_folder, scene_out_dir, scan_id)
         floorplan_embeddings = None
@@ -95,7 +97,6 @@ class Scannet2DProcessor(Base2DProcessor):
             render_img = render_img.resize((self.model_image_size[1], self.model_image_size[0]), Image.BICUBIC)
             render_img_pt = self.model.base_tf(render_img)
             floorplan_embeddings = self.extractFeatures([render_img_pt], return_only_cls_mean = False)            
-        
         floorplan_dict = {'img' : render_img, 'embedding' : floorplan_embeddings}
             
         # Multi-view Image -- Object (Embeddings)
@@ -117,13 +118,12 @@ class Scannet2DProcessor(Base2DProcessor):
         image_path = osp.join(scene_out_dir, 'sel_cams_on_mesh.png')
         Image.fromarray((cams_visualised_on_mesh * 255).astype(np.uint8)).save(image_path)
         
-        data2D = {}
         data2D['objects'] = {'image_embeddings': object_image_embeddings, 'topK_images_votes' : object_image_votes_topK}
         data2D['scene']   = {'scene_embeddings': scene_image_embeddings, 'images' : scene_images_pt, 
                                 'frame_idxs' : frame_idxs, 'sampled_cam_idxs' : sampled_frame_idxs}
         
         data2D['scene']['floorplan'] = floorplan_dict
-        torch.save(data2D, osp.join(scene_out_dir, 'data2D.pt'))
+        np.savez_compressed(osp.join(scene_out_dir, 'data2D.npz'), **data2D)
     
     def computeImageFeaturesEachScan(self, scan_id: str, color_path: str, frame_idxs: List[int]) -> Tuple[np.ndarray, List[torch.tensor], np.ndarray, List[int]]:
         # Sample Camera Indexes Based on Rotation Matrix From Grid

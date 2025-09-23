@@ -120,6 +120,8 @@ See [DATA.MD](DATA.md) for detailed instructions on data download, preparation a
 | ------------ | ----------------------------- | ----------------------------------- |  -------------------------- | -------------------------- |
 | Scannet      | `[point, rgb, cad, referral]` | `[point, rgb, floorplan, referral]` |    ❌                       |          ✅                |
 | 3RScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ✅                       |          ✅                |
+| ARKitScenes       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
+| MultiScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
 
 > To run our demo, you only need to download generated embedding data; no need for any data preprocessing.
 
@@ -162,11 +164,13 @@ We provide all available checkpoints on huggingface 👉 [here](https://huggingf
 |Instance CrossOver trained on 3RScan        | [3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scan3r.pth) |
 |Instance CrossOver trained on ScanNet        | [ScanNet](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet.pth) |
 |Instance CrossOver trained on ScanNet + 3RScan        | [ScanNet+3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet%2Bscan3r.pth) |
+|Instance CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan]() |
 
 ##### ```scene_crossover```
 | Description            | Checkpoint Link |
 | ------------------ | -------------- |
 | Unified CrossOver trained on ScanNet + 3RScan        | [ScanNet+3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/scene_crossover_scannet%2Bscan3r.pth) |
+| Unified CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan]() |
 
 
 ## 🚧 TODO List

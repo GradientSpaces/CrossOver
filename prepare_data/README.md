@@ -5,6 +5,8 @@
 This document provides instructions for pre-processing different datasets, including 
 - ScanNet
 - 3RScan
+- ARKitScenes
+- MultiScan
 
 ## Prerequisites
 
@@ -22,8 +24,13 @@ Before you begin, simply activate the `crossover` conda environment.
 
 - **ShapeNet**: Download ShapenetCore dataset from the [official Huggingface release](https://huggingface.co/datasets/ShapeNet/ShapeNetCore) and unzip.
 
+- **MultiScan**: Download MultiScan dataset from the [official website](https://github.com/smartscenes/multiscan).
+
+- **ARKitScenes**: Download ARKitScenes dataset from the [official website](https://github.com/apple/ARKitScenes).
+
+
 #### Referral and CAD annotations
-We use [SceneVerse](https://scene-verse.github.io/) for instance referrals (ScanNet & 3RScan) and [Scan2CAD](https://github.com/skanti/Scan2CAD) for CAD annotations (ScanNet). 
+We use [SceneVerse](https://scene-verse.github.io/) for instance referrals (ScanNet, 3RScan, MultiScan, & ARKitScenes) and [Scan2CAD](https://github.com/skanti/Scan2CAD) for CAD annotations (ScanNet). 
 
 - **SceneVerse** - Download the Scannet and 3RScan data under `annotations/refer` from the [official website](https://scene-verse.github.io/).
 - **Scan2CAD** - Download `full_annotations.json` from the [official website](https://github.com/skanti/Scan2CAD?tab=readme-ov-file#download-dataset).
@@ -104,6 +111,84 @@ Scan3R/
     ├── objects.json
     ├── train_scans.txt
     ├── val_scans.txt
+    └── sceneverse  
+        └── ssg_ref_rel2_template.json
+```
+
+#### ARKitScenes
+1. Download ARKitScenes 3dod data using the following command:
+
+```bash
+python ARKitScenes/download_data.py 3dod --video_id_csv PATH_TO_3dod_train_val_splits.csv --download_dir PATH_TO_ARKITSCENES
+```
+The files mentioned in the above command - ```download_data.py``` and ```3dod_train_val_splits.csv``` can be found in the official repository [here](https://github.com/apple/ARKitScenes), along with more detailed instructions and descriptions of the data.
+
+2. Once the data is downloaded, run the following to organize it as per our requirements.
+ 
+ ```bash
+cd ARKitScenes
+mv 3dod/Training/* scans
+mv 3dod/Validation/* scans
+```
+
+3. Move the relevant files from `Sceneverse` and `ARKitScenes` under `files/`.
+
+Once completed, the data structure would look like the following:
+```
+ARKitScenes/
+├── scans/
+│   ├── 40753679/
+│   │   ├── 40753679_frames/ 
+│   │   │    ├── lowres_depth/ (folder containing depth images)
+│   │   │    ├── lowres_wide/ (folder containing rgb images)
+│   │   │    ├── lowres_wide_intrinsics/ (folder containing frame wise camera intrinsics)
+│   │   │    ├── lowres_wide.traj (camera trajectory)
+│   │   ├── 40753679_3dod_annotation.json
+│   │   ├── 40753679_3dod_mesh.ply
+|   └── 
+└── files
+    ├── scannetv2-labels.combined.tsv
+    ├── train_scans.txt
+    ├── val_scans.txt
+    ├── metadata.csv
+    ├── 3dod_train_val_splits.csv
+    └── sceneverse  
+        └── ssg_ref_rel2_template.json
+```
+
+#### MultiScan
+1. Download MultiScan data into MultiScan/scenes and run the following to extract MultiScan data 
+ 
+ ```bash
+cd MultiScan/scenes
+unzip '*.zip'
+rm -rf '*.zip'
+```
+3. To generate sequence of RGB images and corresponding camera poses from the ```.mp4``` file, run the follwing
+```bash
+cd prepare_data/multiscan
+python preprocess_2d_multiscan.py --base_dir PATH_TO_MULTISCAN --frame_interval {frame_interval}
+```
+Once completed, the data structure would look like the following:
+```
+MultiScan/
+├── scenes/
+│   ├── scene_00000_00/
+│   │   ├── sequence/ (folder containing rgb images at specified frame interval)
+|   |   ├── frame_ids.txt
+│   │   ├── scene_00000_00.annotations.json
+│   │   ├── scene_00000_00.jsonl
+│   │   ├── scene_00000_00.confidence.zlib
+│   │   ├── scene_00000_00.mp4
+│   │   ├── poses.jsonl
+│   │   ├── scene_00000_00.ply
+│   │   ├── scene_00000_00.align.json
+│   │   ├── scene_00000_00.json
+|   └── 
+└── files
+    ├── scannetv2-labels.combined.tsv
+    ├── train_scans.txt
+    ├── test_scans.txt
     └── sceneverse  
         └── ssg_ref_rel2_template.json
 ```

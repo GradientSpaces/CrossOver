@@ -21,7 +21,7 @@ $ bash scripts/train/train_instance_crossover.sh
 ```
 
 #### Train Scene Retrieval Pipeline
-Adjust path/configuration parameters in `configs/train/train_scene_crossover.yaml`. You can also add your customised dataset or choose to train on Scannet & 3RScan or either. Run the following:
+Adjust path/configuration parameters in `configs/train/train_scene_crossover.yaml`. You can also add your customised dataset or choose to train on any combination of Scannet, 3RScan, ARKitScenes & MultiScan. Run the following:
 
 ```bash
 $ bash scripts/train/train_scene_crossover.sh
@@ -45,11 +45,13 @@ We provide all available checkpoints on huggingface 👉 [here](https://huggingf
 |Instance CrossOver trained on 3RScan        | [3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scan3r.pth) |
 |Instance CrossOver trained on ScanNet        | [ScanNet](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet.pth) |
 |Instance CrossOver trained on ScanNet + 3RScan        | [ScanNet+3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet%2Bscan3r.pth) |
+|Instance CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan]() |
 
 ##### ```scene_crossover```
 | Description            | Checkpoint Link |
 | ------------------ | -------------- |
 | Unified CrossOver trained on ScanNet + 3RScan        | [ScanNet+3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/scene_crossover_scannet%2Bscan3r.pth) |
+| Unified CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan       | [ScanNet+3RScan+ARKitScenes+MultiScan]() |
 
 
 # :shield: Single Inference

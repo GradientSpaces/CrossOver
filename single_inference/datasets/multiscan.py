@@ -9,11 +9,13 @@ import torch
 import open3d as o3d
 
 from common import load_utils
+from common.load_utils import load_yaml
 from util import multiscan
 from util import image as image_util
+import albumentations as A
 
 class MultiScanInferDataset(Dataset):
-    def __init__(self, data_dir, voxel_size=0.02, frame_skip=1, image_size=[224, 224]) -> None:
+    def __init__(self, data_dir, process_dir, voxel_size=0.02, frame_skip=1, image_size=[224, 224]) -> None:
         self.voxel_size = voxel_size
         self.frame_skip = frame_skip
         self.image_size = image_size
@@ -21,6 +23,7 @@ class MultiScanInferDataset(Dataset):
         self.scans_dir = osp.join(data_dir, 'scenes')
         self.files_dir = osp.join(data_dir, 'files')
         self.referrals = load_utils.load_json(osp.join(self.files_dir, 'sceneverse/ssg_ref_rel2_template.json'))
+        self.process_dir = process_dir
         
         self.scan_ids = []
         for split in ['train', 'val']:
@@ -32,6 +35,14 @@ class MultiScanInferDataset(Dataset):
             tvf.Normalize(mean=[0.485, 0.456, 0.406], 
                           std=[0.229, 0.224, 0.225])
         ])
+        
+        self.color_mean_std_path = osp.join(self.process_dir, 'color_mean_std.yaml')
+        self.color_mean_std = load_yaml(self.color_mean_std_path)
+        color_mean, color_std = (
+            tuple(self.color_mean_std["mean"]),
+            tuple(self.color_mean_std["std"]),
+        )
+        self.normalize_color = A.Normalize(mean=color_mean, std=color_std)
     
     def extract_images(self, scan_id, color_path):
         frame_idxs = multiscan.load_frame_idxs(osp.join(self.scans_dir, scan_id))
@@ -74,9 +85,10 @@ class MultiScanInferDataset(Dataset):
         points = np.asarray(mesh.vertices)
         feats  = np.asarray(mesh.vertex_colors)*255.0
         feats = feats.round()
-        
-        feats /= 255.
-        feats -= 0.5
+        pseudo_image = feats.astype(np.uint8)[np.newaxis, :, :]
+        feats = np.squeeze(self.normalize_color(image=pseudo_image)["image"])
+        # feats /= 255.
+        # feats -= 0.5
         
         _, sel = ME.utils.sparse_quantize(points / self.voxel_size, return_index=True)
         coords,  feats = points[sel], feats[sel]

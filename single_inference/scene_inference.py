@@ -23,13 +23,13 @@ log.basicConfig(level=log.INFO,
 
 def run_inference(args, scan_id=None):
     if args.dataset == 'Scannet':
-        dataset = datasets.ScannetInferDataset(args.data_dir, args.floorplan_dir)
+        dataset = datasets.ScannetInferDataset(args.data_dir, args.process_dir)
     elif args.dataset == 'Scan3R':
-        dataset = datasets.Scan3RInferDataset(args.data_dir)
+        dataset = datasets.Scan3RInferDataset(args.data_dir, args.process_dir)
     elif args.dataset == 'ARKitScenes':
-        dataset = datasets.ARKitScenesInferDataset(args.data_dir)
+        dataset = datasets.ARKitScenesInferDataset(args.data_dir, args.process_dir)
     elif args.dataset == 'MultiScan':
-        dataset = datasets.MultiScanInferDataset(args.data_dir)
+        dataset = datasets.MultiScanInferDataset(args.data_dir, args.process_dir)
     else:
         raise NotImplementedError('Dataset not implemented')
     
@@ -79,8 +79,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Scene Inference')
     parser.add_argument('--dataset', default='Scannet', type=str, required=False)
     parser.add_argument('--data_dir', default='/drive/datasets/Scannet', type=str, required=False)
-    parser.add_argument('--floorplan_dir', default='/drive/dumps/multimodal-spaces/preprocess_feats/Scannet/scans', type=str, required=False)
-    parser.add_argument('--ckpt', default='/drive/dumps/multimodal-spaces/runs/UnifiedTrain_Scannet+Scan3R/2025-01-29-13:36:55.217923/ckpt/best.pth/', type=str, required=False)
+    parser.add_argument('--process_dir', default='/drive/dumps/multimodal-spaces/preprocess_feats/Scannet', type=str, required=False)
+    parser.add_argument('--ckpt', default='/drive/dumps/multimodal-spaces/runs/new_runs/rgb/scene_crossover_scannet+scan3r_scratch.pth', type=str, required=False)
     parser.add_argument('--scan_id', default='', type=str, required=False)
     parser.add_argument('--input_dim_3d', default=512, type=int, required=False)
     parser.add_argument('--input_dim_2d', default=1536, type=int, required=False)

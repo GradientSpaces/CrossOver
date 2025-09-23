@@ -68,10 +68,15 @@ assume complete data availability across all modalities. We present **CrossOver*
 
 
 # :newspaper: News
-> 📡 Stay tuned for stronger checkpoint release trained on many more datasets!
-- ![](https://img.shields.io/badge/New!-8A2BE2) [2025-05] Pretrained checkpoints have been moved to HuggingFace 👉 [here](https://huggingface.co/gradient-spaces/CrossOver/tree/main).
+<!-- > 📡 Stay tuned for stronger checkpoint release trained on many more datasets! -->
+- ![](https://img.shields.io/badge/New!-8A2BE2) **Version 1.0** - **CrossOver is now stronger than ever**. We recommend updating to this version; changes include:
+  - More powerful pre-trained checkpoints; now available on Huggingface 👉 [here](https://huggingface.co/gradient-spaces/CrossOver/tree/main).
+  - Support for 2 additional datasets - ARKitScenes & MultiScan
+  
+
+- [2025-05] Pretrained checkpoints have been moved to HuggingFace 👉 [here](https://huggingface.co/gradient-spaces/CrossOver/tree/main).
 - [2025-03] CrossOver is accepted to **CVPR 2025** as **Highlight**. 🔥
-- [2025-02] We release CrossOver on arXiv with codebase + pre-trained checkpoints. Checkout our [paper](https://arxiv.org/abs/2502.15011) and [website](https://sayands.github.io/crossover/).
+- [2025-02] **Version 0.1** - We release CrossOver on arXiv with codebase + pre-trained checkpoints. Checkout our [paper](https://arxiv.org/abs/2502.15011) and [website](https://sayands.github.io/crossover/).
 
 # :hammer_and_wrench: Installation
 The code has been tested on: 

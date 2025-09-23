@@ -3,7 +3,7 @@ import numpy as np
 from plyfile import PlyData
 from glob import glob
 import csv
-
+import trimesh
 
 def get_scan_ids(dirname: str, split: str) -> np.ndarray:
     """Retrieve scan IDs for the given directory and split."""
@@ -11,34 +11,45 @@ def get_scan_ids(dirname: str, split: str) -> np.ndarray:
     scan_ids = np.genfromtxt(filepath, dtype = str)
     return scan_ids
 
-def load_ply_data(data_dir: str, scan_id: str, label_file_name: str) -> np.ndarray:
-    """Load PLY data from specified directory, scan ID, and label file."""
+def load_ply_data(data_dir, scan_id, label_file_name):        
     filename_in = osp.join(data_dir, scan_id, label_file_name)
     file = open(filename_in, 'rb')
     ply_data = PlyData.read(file)
     file.close()
     x = ply_data['vertex']['x']
-    y = ply_data['vertex']['y']
-    z = ply_data['vertex']['z']
-    red = ply_data['vertex']['red']
-    green = ply_data['vertex']['green']
-    blue = ply_data['vertex']['blue']
+
     object_id = ply_data['vertex']['objectId']
     global_id = ply_data['vertex']['globalId']
     nyu40_id = ply_data['vertex']['NYU40']
     eigen13_id = ply_data['vertex']['Eigen13']
     rio27_id = ply_data['vertex']['RIO27']
 
-    vertices = np.empty(len(x), dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'),  ('red', 'u1'), ('green', 'u1'), ('blue', 'u1'),
+    obj_mesh = trimesh.load(osp.join(data_dir, scan_id, 'mesh.refined.v2.obj'))
+    
+    obj_mesh_points = np.asarray(obj_mesh.vertices)
+    obj_mesh_colors = obj_mesh.visual.to_color().vertex_colors[:,:3]
+    
+    min_vertices = min(len(object_id), len(x), obj_mesh_points.shape[0])
+    
+    obj_mesh_points = obj_mesh_points[:min_vertices]
+    object_ids = object_id[:min_vertices]
+    obj_mesh_colors = obj_mesh_colors[:min_vertices]
+    global_id = global_id[:min_vertices]
+    nyu40_id = nyu40_id[:min_vertices]
+    eigen13_id = eigen13_id[:min_vertices]
+    rio27_id = rio27_id[:min_vertices]
+    
+    vertices = np.empty(min_vertices, dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'),  ('red', 'u1'), ('green', 'u1'), ('blue', 'u1'),
                                                      ('objectId', 'h'), ('globalId', 'h'), ('NYU40', 'u1'), ('Eigen13', 'u1'), ('RIO27', 'u1')])
     
-    vertices['x'] = x.astype('f4')
-    vertices['y'] = y.astype('f4')
-    vertices['z'] = z.astype('f4')
-    vertices['red'] = red.astype('u1')
-    vertices['green'] = green.astype('u1')
-    vertices['blue'] = blue.astype('u1')
-    vertices['objectId'] = object_id.astype('h')
+
+    vertices['x'] = obj_mesh_points[:, 0].astype('f4')
+    vertices['y'] = obj_mesh_points[:, 1].astype('f4')
+    vertices['z'] = obj_mesh_points[:, 2].astype('f4')
+    vertices['red'] = obj_mesh_colors[:, 0].astype('u1')
+    vertices['green'] = obj_mesh_colors[:, 1].astype('u1')
+    vertices['blue'] = obj_mesh_colors[:, 2].astype('u1')
+    vertices['objectId'] = object_ids.astype('h')
     vertices['globalId'] = global_id.astype('h')
     vertices['NYU40'] = nyu40_id.astype('u1')
     vertices['Eigen13'] = eigen13_id.astype('u1')

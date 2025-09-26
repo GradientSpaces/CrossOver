@@ -73,13 +73,14 @@ def run_inference(args, scan_id=None):
                 
                 data['scene'].append({'scan_id': scan_id, 'scene_embeds': output_np, 'masks': output['masks']})
             
-        torch.save(data, f'/drive/dumps/multimodal-spaces/release_data/embed_{args.dataset.lower()}.pt')
+        torch.save(data, f'/drive/dumps/multimodal-spaces/v1.0_release/embed_{args.dataset.lower()}.pt')
+        
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Scene Inference')
-    parser.add_argument('--dataset', default='Scannet', type=str, required=False)
-    parser.add_argument('--data_dir', default='/drive/datasets/Scannet', type=str, required=False)
-    parser.add_argument('--process_dir', default='/drive/dumps/multimodal-spaces/preprocess_feats/Scannet', type=str, required=False)
+    parser.add_argument('--dataset', default='ARKitScenes', type=str, required=False)
+    parser.add_argument('--data_dir', default='/media/sayan/internal/datasets/ARKitScenes', type=str, required=False)
+    parser.add_argument('--process_dir', default='/drive/dumps/multimodal-spaces/preprocess_feats/ARKitScenes', type=str, required=False)
     parser.add_argument('--ckpt', default='/drive/dumps/multimodal-spaces/runs/new_runs/rgb/scene_crossover_scannet+scan3r_scratch.pth', type=str, required=False)
     parser.add_argument('--scan_id', default='', type=str, required=False)
     parser.add_argument('--input_dim_3d', default=512, type=int, required=False)

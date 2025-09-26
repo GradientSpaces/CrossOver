@@ -35,7 +35,7 @@ class ARKitScenesInferDataset(Dataset):
             tvf.Normalize(mean=[0.485, 0.456, 0.406], 
                           std=[0.229, 0.224, 0.225])
         ])
-        self.metadata = pd.read_csv(osp.join(self.files_dir,'metadata.csv'))
+        # self.metadata = pd.read_csv(osp.join(self.files_dir,'metadata.csv'))
         
         self.color_mean_std_path = osp.join(self.process_dir, 'color_mean_std.yaml')
         self.color_mean_std = load_yaml(self.color_mean_std_path)

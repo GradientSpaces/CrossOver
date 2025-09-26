@@ -19,7 +19,7 @@ class ScannetInferDataset(Dataset):
         self.voxel_size = voxel_size
         self.frame_skip = frame_skip
         self.image_size = image_size
-        
+        self.process_dir = process_dir
         self.scans_dir = osp.join(data_dir, 'scans')
         self.files_dir = osp.join(data_dir, 'files')
         self.floorplan_path = osp.join(process_dir, 'scans')

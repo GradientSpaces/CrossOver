@@ -91,8 +91,6 @@ class Scan3RInferDataset(Dataset):
     
         points = np.asarray(mesh.vertices)
         feats = mesh.visual.to_color().vertex_colors[:,:3]
-        print(feats.shape, points.shape)
-        print(feats.max(), feats.min())
     
         # ply_data = scan3r.load_ply_data(osp.join(self.data_dir, 'scans'), scan_id, self.label_filename)
         # points = np.stack([ply_data['x'], ply_data['y'], ply_data['z']]).transpose((1, 0))

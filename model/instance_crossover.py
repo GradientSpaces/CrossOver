@@ -6,7 +6,6 @@ import numpy as np
 import MinkowskiEngine as ME
 
 from third_party.BLIP.models.blip import blip_feature_extractor
-from modules.layers.patch_encoder import Mlps
 from modules.basic_modules import get_mlp_head
 from modules.encoder2D.dinov2 import DinoV2
 from modules.layers.pointnet import PointTokenizeEncoder
@@ -62,83 +61,127 @@ class InstanceCrossOverModel(nn.Module):
         
         return model
     
-    def encode_point_objects(self, obj_points: torch.Tensor, obj_masks: torch.Tensor) -> torch.Tensor:
-        """Encode raw point cloud data for objects"""
+    def encode_point_objects(self, obj_points, obj_masks: torch.Tensor) -> torch.Tensor:
+        """Encode raw point cloud data for objects - matches preprocessing approach"""
         
-        batch_size, num_objects, num_points, _ = obj_points.shape
+        # obj_points is now a list of raw point clouds (like preprocessing)
+        # batch_size is always 1 for single-scan datasets
+        if isinstance(obj_points, list):
+            # Single batch case - obj_points is list of point clouds
+            point_clouds_batch = obj_points
+            batch_size = 1
+            num_objects = len(point_clouds_batch)
+        else:
+            # Legacy tensor format (if still used elsewhere)
+            batch_size, num_objects, num_points, _ = obj_points.shape
+            point_clouds_batch = [obj_points[0, o].cpu().numpy() for o in range(num_objects)]
         
-        # Extract features for each object using I2PMAE
+        # Extract features for each object using I2PMAE (like preprocessing)
         object_features = []
-        for b in range(batch_size):
-            batch_features = []
-            for o in range(num_objects):
-                if obj_masks[b, o]:  # Only process valid objects
-                    obj_pts = obj_points[b, o].cpu().numpy()  # (num_points, 3)
-                    
-                    sampled_points = point_cloud.sample_and_normalize_pcl(obj_pts)
-                    points_pt = torch.from_numpy(sampled_points).unsqueeze(0).to(self.device).float()
-                    
-                    with torch.no_grad():
-                        obj_feat = self.point_feature_extractor(points_pt)  # (1, feat_dim)
-                    
-                    batch_features.append(obj_feat.squeeze(0))
-                else:
-                    batch_features.append(torch.zeros(self.feat_dims[ModalityType.POINT]).to(self.device))
-            
-            object_features.append(torch.stack(batch_features))
+        object_locations = []
         
-        point_features = torch.stack(object_features)
+        for o in range(num_objects):
+            if obj_masks[0, o]:  
+                obj_pts = point_clouds_batch[o] 
+                
+                sampled_points = point_cloud.sample_and_normalize_pcl(obj_pts)
+                object_loc, object_box = point_cloud.get_object_loc_box(obj_pts)
+                
+                points_pt = torch.from_numpy(sampled_points).unsqueeze(0).to(self.device).float()
+                
+                with torch.no_grad():
+                    obj_feat = self.point_feature_extractor(points_pt) 
+                
+                object_features.append(obj_feat.squeeze(0))
+                object_locations.append(object_loc)  
+            else:
+                object_features.append(torch.zeros(self.feat_dims[ModalityType.POINT]).to(self.device))
+                object_locations.append(np.zeros(3)) 
         
-        point_embeddings = self.modality_projections[ModalityType.POINT](point_features.view(-1, point_features.size(-1)))
-        point_embeddings = point_embeddings.view(batch_size, num_objects, -1)
+        point_features = torch.stack(object_features).unsqueeze(0)  # (1, num_objects, feat_dim)
+        
+        obj_locs = torch.from_numpy(np.stack(object_locations)).unsqueeze(0).to(self.device).float()  # (1, num_objects, 3)
+        encoded_features = self.modality_encoders[ModalityType.POINT](point_features, obj_locs, obj_masks.unsqueeze(0))
+        
+        point_embeddings = self.modality_projections[ModalityType.POINT](encoded_features.view(-1, encoded_features.size(-1)))
+        point_embeddings = point_embeddings.view(1, num_objects, -1) 
         return point_embeddings
     
-    def encode_cad_objects(self, obj_points: torch.Tensor, obj_masks: torch.Tensor) -> torch.Tensor:
-        """Encode raw CAD point cloud data for objects"""
+    def encode_cad_objects(self, obj_points, obj_masks: torch.Tensor) -> torch.Tensor:
+        """Encode raw CAD point cloud data for objects - matches preprocessing approach"""
         
-        batch_size, num_objects, num_points, _ = obj_points.shape
+        # obj_points is now a list of raw CAD point clouds (like preprocessing)
+        # batch_size is always 1 for single-scan datasets
+        if isinstance(obj_points, list):
+            # Single batch case - obj_points is list of CAD point clouds
+            cad_clouds_batch = obj_points
+            batch_size = 1
+            num_objects = len(cad_clouds_batch)
+        else:
+            # Legacy tensor format (if still used elsewhere)
+            batch_size, num_objects, num_points, _ = obj_points.shape
+            cad_clouds_batch = [obj_points[0, o].cpu().numpy() for o in range(num_objects)]
         
+        # Extract features for each object using I2PMAE (like preprocessing)
         object_features = []
-        for b in range(batch_size):
-            batch_features = []
-            for o in range(num_objects):
-                if obj_masks[b, o]:  
-                    obj_pts = obj_points[b, o].cpu().numpy()  
+        object_locations = []
+        
+        for o in range(num_objects):
+            if obj_masks[0, o]:  # Only process valid CAD objects
+                obj_pts = cad_clouds_batch[o]  # Raw CAD point cloud (variable size)
+                
+                if len(obj_pts) > 0:  # Check if CAD data exists
+                    # Sample and normalize like preprocessing normalizeObjectPCLAndExtractFeats
                     sampled_points = point_cloud.sample_and_normalize_pcl(obj_pts)
+                    # Get object location like preprocessing
+                    object_loc, object_box = point_cloud.get_object_loc_box(obj_pts)
+                    
                     points_pt = torch.from_numpy(sampled_points).unsqueeze(0).to(self.device).float()
                     
                     with torch.no_grad():
                         obj_feat = self.point_feature_extractor(points_pt)  # (1, feat_dim)
                     
-                    batch_features.append(obj_feat.squeeze(0))
+                    object_features.append(obj_feat.squeeze(0))
+                    object_locations.append(object_loc)  # Store computed location
                 else:
-                    batch_features.append(torch.zeros(self.feat_dims[ModalityType.CAD]).to(self.device))
-            
-            object_features.append(torch.stack(batch_features))
+                    # Empty CAD data
+                    object_features.append(torch.zeros(self.feat_dims[ModalityType.CAD]).to(self.device))
+                    object_locations.append(np.zeros(3))  # Zero location for empty CAD
+            else:
+                object_features.append(torch.zeros(self.feat_dims[ModalityType.CAD]).to(self.device))
+                object_locations.append(np.zeros(3))  # Zero location for invalid objects
         
-        cad_features = torch.stack(object_features)
+        cad_features = torch.stack(object_features).unsqueeze(0)  # (1, num_objects, feat_dim)
         
-        cad_embeddings = self.modality_projections[ModalityType.CAD](cad_features.view(-1, cad_features.size(-1)))
-        cad_embeddings = cad_embeddings.view(batch_size, num_objects, -1)
+        # Apply modality encoder with computed object locations (like preprocessing)
+        obj_locs = torch.from_numpy(np.stack(object_locations)).unsqueeze(0).to(self.device).float()  # (1, num_objects, 3)
+        encoded_features = self.modality_encoders[ModalityType.CAD](cad_features, obj_locs, obj_masks.unsqueeze(0))
+        
+        cad_embeddings = self.modality_projections[ModalityType.CAD](encoded_features.view(-1, encoded_features.size(-1)))
+        cad_embeddings = cad_embeddings.view(1, num_objects, -1)  # (1, num_objects, out_dim)
         return cad_embeddings
     
     def encode_rgb_objects(self, rgb_images: torch.Tensor) -> torch.Tensor:
-        """Encode RGB images for objects"""
-        batch_size, num_objects, num_views = rgb_images.size(0), rgb_images.size(1), rgb_images.size(2)
+        """Encode RGB images for objects exactly like preprocessing extractFeatures()"""
+        num_objects, num_crops = rgb_images.size(1), rgb_images.size(2)
         
-        rgb_flat = rgb_images.view(-1, rgb_images.size(-3), rgb_images.size(-2), rgb_images.size(-1))
+        object_embeddings = []
         
-        rgb_embedding = self.encoder2D(rgb_flat) 
+        for o in range(num_objects):
+            object_crops = rgb_images[0, o]  
+            crops_tensor = object_crops.to(self.device)
+            
+            with torch.no_grad():
+                
+                features = self.encoder2D(crops_tensor) 
+                cls_tokens = features[:, 0, :] 
+                
+                mean_features = cls_tokens.mean(dim=0)  
+                
+            projected_embedding = self.modality_projections[ModalityType.RGB](mean_features.unsqueeze(0)).squeeze(0)
+            object_embeddings.append(projected_embedding)
         
-        rgb_embedding = rgb_embedding[:, 0, :]  
-        
-        rgb_embedding = rgb_embedding.view(batch_size, num_objects, num_views, -1)
-        rgb_embedding = rgb_embedding.mean(dim=2)
-        rgb_embedding = rgb_embedding.view(batch_size, num_objects, -1)
-        
-        rgb_embeddings = self.modality_projections[ModalityType.RGB](rgb_embedding.view(-1, rgb_embedding.size(-1)))
-        rgb_embeddings = rgb_embeddings.view(batch_size, num_objects, -1)
-        return rgb_embeddings
+        return torch.stack(object_embeddings).unsqueeze(0)
     
     def encode_referral_objects(self, referral_texts: List[List[List[str]]]) -> torch.Tensor:
         """Encode referral texts for objects"""

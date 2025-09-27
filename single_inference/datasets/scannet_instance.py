@@ -90,27 +90,18 @@ class ScannetInstanceInference:
         return mesh_points, instance_ids, object_id_to_label_id, cad_data
     
     def extract_object_point_clouds(self, mesh_points, instance_ids, object_id_to_label_id):
-        """Extract point clouds for each object instance"""
+        """Extract raw point clouds for each object (no sampling - done in model like preprocessing)"""
         object_point_clouds = {}
-        unique_instance_ids = np.unique(instance_ids)
         
-        for instance_id in unique_instance_ids:
-            if instance_id == self.undefined or instance_id not in object_id_to_label_id:
-                continue
+        for instance_id in object_id_to_label_id.keys():
             
             object_mask = instance_ids == instance_id
             object_points = mesh_points[object_mask]
             
-            # Subsample or pad points
-            if len(object_points) > self.max_points_per_object:
-                indices = np.random.choice(len(object_points), self.max_points_per_object, replace=False)
-                object_points = object_points[indices]
-            elif len(object_points) < self.max_points_per_object:
-                pad_size = self.max_points_per_object - len(object_points)
-                object_points = np.pad(object_points, ((0, pad_size), (0, 0)), mode='constant')
-            
+            # Store raw points - sampling will be done in model during feature extraction
+            # This matches the preprocessing approach where sampling happens in normalizeObjectPCLAndExtractFeats
             object_point_clouds[instance_id] = {
-                'points': object_points,
+                'points': object_points,  # Raw points, no sampling/padding
                 'label_id': object_id_to_label_id[instance_id]
             }
         
@@ -219,16 +210,17 @@ class ScannetInstanceInference:
         objects_dict = {'inputs': {}, 'object_locs': {}}
         masks = {}
         
-        point_coords = np.zeros((1, num_objects, self.max_points_per_object, 3))
-        point_masks = np.zeros((1, num_objects))
+        # Store raw point clouds - model will handle sampling during feature extraction
+        point_clouds = []
+        point_masks = []
         
         for i, obj_id in enumerate(object_ids):
             obj_data = object_point_clouds[obj_id]
-            point_coords[0, i] = obj_data['points']
-            point_masks[0, i] = 1.0
+            point_clouds.append(obj_data['points'])  # Raw points (variable size)
+            point_masks.append(True)
         
-        objects_dict['inputs']['point'] = torch.from_numpy(point_coords).float()
-        masks['point'] = torch.from_numpy(point_masks).bool()
+        objects_dict['inputs']['point'] = point_clouds  # List of raw point clouds
+        masks['point'] = torch.tensor([[True] * num_objects]).bool()  # (1, num_objects)
         
         object_images_dict = self.extract_object_images(object_ids)
         
@@ -255,26 +247,22 @@ class ScannetInstanceInference:
         masks['rgb'] = rgb_masks
         
         if cad_data:
-            cad_coords = np.zeros((1, num_objects, self.max_points_per_object, 3))
-            cad_masks = np.zeros((1, num_objects))
+            # Store raw CAD point clouds - model will handle sampling during feature extraction
+            cad_point_clouds = []
+            cad_mask_list = []
             
             for i, obj_id in enumerate(object_ids):
                 if obj_id in cad_data:
-                    cad_points = cad_data[obj_id]
-                    
-                    # Sample or pad points to match max_points_per_object
-                    if len(cad_points) > self.max_points_per_object:
-                        indices = np.random.choice(len(cad_points), self.max_points_per_object, replace=False)
-                        cad_points = cad_points[indices]
-                    elif len(cad_points) < self.max_points_per_object:
-                        pad_size = self.max_points_per_object - len(cad_points)
-                        cad_points = np.pad(cad_points, ((0, pad_size), (0, 0)), mode='constant')
-                    
-                    cad_coords[0, i] = cad_points  # Raw CAD coordinates for I2PMAE
-                    cad_masks[0, i] = 1.0
+                    cad_points = cad_data[obj_id]  # Raw CAD points (variable size)
+                    cad_point_clouds.append(cad_points)
+                    cad_mask_list.append(True)
+                else:
+                    # No CAD data for this object - add dummy data
+                    cad_point_clouds.append(np.empty((0, 3)))  # Empty point cloud
+                    cad_mask_list.append(False)
             
-            objects_dict['inputs']['cad'] = torch.from_numpy(cad_coords).float()
-            masks['cad'] = torch.from_numpy(cad_masks).bool()
+            objects_dict['inputs']['cad'] = cad_point_clouds  # List of raw CAD point clouds
+            masks['cad'] = torch.tensor([cad_mask_list]).bool()  # (1, num_objects)
         
         object_referrals = self.get_object_referrals(object_ids)
         batch_referral_texts = []

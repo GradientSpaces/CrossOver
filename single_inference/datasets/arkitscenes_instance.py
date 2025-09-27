@@ -70,16 +70,10 @@ class ARKitScenesInstanceInference:
             mask = object_ids == obj_id
             obj_vertices = vertices[mask]
             
-            # Subsample or pad points
-            if len(obj_vertices) > self.max_points_per_object:
-                indices = np.random.choice(len(obj_vertices), self.max_points_per_object, replace=False)
-                obj_vertices = obj_vertices[indices]
-            elif len(obj_vertices) < self.max_points_per_object:
-                pad_size = self.max_points_per_object - len(obj_vertices)
-                obj_vertices = np.pad(obj_vertices, ((0, pad_size), (0, 0)), mode='constant')
-            
+            # Store raw points - sampling will be done in model during feature extraction
+            # This matches the preprocessing approach where sampling happens in normalizeObjectPCLAndExtractFeats
             objects_data[obj_id] = {
-                'points': obj_vertices
+                'points': obj_vertices  # Raw points, no sampling/padding
             }
         
         return objects_data, list(objects_data.keys())
@@ -190,16 +184,15 @@ class ARKitScenesInstanceInference:
         objects_dict = {'inputs': {}, 'object_locs': {}}
         masks = {}
         
-        point_coords = np.zeros((1, num_objects, self.max_points_per_object, 3))
-        point_masks = np.zeros((1, num_objects))
+        # Store raw point clouds - model will handle sampling during feature extraction
+        point_clouds = []
         
         for i, obj_id in enumerate(object_ids):
             obj_data = objects_data[obj_id]
-            point_coords[0, i] = obj_data['points']  # Raw point coordinates
-            point_masks[0, i] = 1.0
+            point_clouds.append(obj_data['points'])  # Raw points (variable size)
         
-        objects_dict['inputs']['point'] = torch.from_numpy(point_coords).float()
-        masks['point'] = torch.from_numpy(point_masks).bool()
+        objects_dict['inputs']['point'] = point_clouds  # List of raw point clouds
+        masks['point'] = torch.tensor([[True] * num_objects]).bool()  # (1, num_objects)
         
         # RGB data - extract object-specific image crops
         object_images_dict = self.extract_object_images(object_ids)

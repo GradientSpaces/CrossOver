@@ -66,15 +66,10 @@ class Scan3RInstanceInference:
             mask = object_ids == obj_id
             obj_vertices = vertices[mask]
             
-            if len(obj_vertices) > self.max_points_per_object:
-                indices = np.random.choice(len(obj_vertices), self.max_points_per_object, replace=False)
-                obj_vertices = obj_vertices[indices]
-            elif len(obj_vertices) < self.max_points_per_object:
-                pad_size = self.max_points_per_object - len(obj_vertices)
-                obj_vertices = np.pad(obj_vertices, ((0, pad_size), (0, 0)), mode='constant')
-            
+            # Store raw points - sampling will be done in model during feature extraction
+            # This matches the preprocessing approach where sampling happens in normalizeObjectPCLAndExtractFeats
             objects_data[obj_id] = {
-                'points': obj_vertices
+                'points': obj_vertices  # Raw points, no sampling/padding
             }
         
         return objects_data, list(objects_data.keys())

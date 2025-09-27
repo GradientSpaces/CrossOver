@@ -26,13 +26,13 @@ from single_inference.datasets.arkitscenes_instance import ARKitScenesInstanceIn
 from single_inference.datasets.multiscan_instance import MultiScanInstanceInference
 
 DEFAULT_CONFIG = {
-    'dataset': 'arkitscenes',  # scannet, scan3r, arkitscenes, multiscan
-    'data_dir': '/media/sayan/internal/datasets/ARKitScenes',  # Update this with your data path
-    'process_dir': '/drive/dumps/multimodal-spaces/preprocess_feats/ARKitScenes',  # Update this with your processed data path
+    'dataset': 'scannet',  # scannet, scan3r, arkitscenes, multiscan
+    'data_dir': '/drive/datasets/Scannet',  # Update this with your data path
+    'process_dir': '/drive/dumps/multimodal-spaces/preprocess_feats/Scannet',  # Update this with your processed data path
     'ckpt': '/drive/dumps/multimodal-spaces/runs/new_runs/instance_crossover_scannet+scan3r+multiscan+arkitscenes.pth',  # Update this with your model checkpoint
-    'scan_id': '40753679',  # Default scan to search in
+    'scan_id': 'scene0568_00',  # Default scan to search in
     'query_modality': 'point',  # point, rgb, referral
-    'target_modality': 'point',  # point, rgb, referral, cad
+    'target_modality': 'referral',  # point, rgb, referral, cad
     'query_path': './demo_data/kitchen/scene.ply',  # Path to your query file
     'top_k': 5  
 }
@@ -104,28 +104,20 @@ class InstanceRetrieval:
         else:
             raise NotImplementedError(f'Query modality {query_modality} not implemented')
     
-    def _encode_point_query(self, path: str, max_points: int = 1024) -> torch.Tensor:
-        """Encode point cloud query"""
+    def _encode_point_query(self, path: str) -> torch.Tensor:
+        """Encode point cloud query - matches dataset approach with raw point cloud"""
         assert path.endswith('.ply'), 'Point Cloud Path should be a .ply file!'
         
         pcd = o3d.io.read_point_cloud(path) 
         points = np.asarray(pcd.points)
         
-        # Subsample or pad to max_points
-        if len(points) > max_points:
-            indices = np.random.choice(len(points), max_points, replace=False)
-            points = points[indices]
-        elif len(points) < max_points:
-            pad_size = max_points - len(points)
-            points = np.pad(points, ((0, pad_size), (0, 0)), mode='constant')
-        
-        # Convert to model expected format: (batch_size, num_objects, num_points, 3)
-        point_coords = torch.from_numpy(points).float().unsqueeze(0).unsqueeze(0)  # (1, 1, max_points, 3)
+        # Send raw point cloud as list (like datasets) - model will handle sampling
+        point_clouds = [points]  # List of raw point clouds
         point_masks = torch.ones(1, 1).bool()  # (1, 1)
         
         data_dict = {
             'objects': {
-                'inputs': {'point': point_coords}
+                'inputs': {'point': point_clouds}  # List format, not tensor
             },
             'masks': {'point': point_masks}
         }
@@ -248,29 +240,23 @@ class InstanceRetrieval:
         valid_indices = torch.where(valid_mask)[0]
         
         # Compute similarities
-        similarities = torch.cosine_similarity(
-            query_embed.unsqueeze(0), 
-            valid_embeddings, 
-            dim=1
-        )
-        
-        # Get top-k results
-        top_k = min(top_k, len(similarities))
-        _, top_indices = torch.topk(similarities, top_k)
+        sim = torch.softmax(query_embed.unsqueeze(0) @ valid_embeddings.t(), dim=-1)
+        rank_list = torch.argsort(1.0 - sim, dim=1)
+        top_k_indices = rank_list[0, :top_k]
         
         results = []
         object_ids = scene_data[target_modality]['object_ids']
         
-        for i in range(top_k):
-            valid_idx = top_indices[i].item()
+        for i in range(min(top_k, len(top_k_indices))):
+            valid_idx = top_k_indices[i].item()
             original_idx = valid_indices[valid_idx].item()
-            similarity = similarities[valid_idx].item()
+            similarity = sim[0, valid_idx].item()  # Get similarity from softmax result
             actual_object_id = object_ids[original_idx] if original_idx < len(object_ids) else original_idx
             results.append((actual_object_id, similarity))
         
         log.info(f"Found {len(results)} matches:")
         for i, (obj_id, sim) in enumerate(results):
-            log.info(f"  {i+1}. Object ID {obj_id}: {sim:.4f}")
+            log.info(f"  {i+1}. Object ID {obj_id}")
         
         return results
 

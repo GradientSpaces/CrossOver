@@ -38,7 +38,9 @@ class InstanceCrossOverModel(nn.Module):
             ModalityType.CAD: PointTokenizeEncoder(use_attn=False, hidden_size=self.feat_dims[ModalityType.CAD])
         })
         
-        self.encoder2D = DinoV2('dinov2_vitg14', self.device).feature_extractor
+        # self.encoder2D = DinoV2('dinov2_vitg14', self.device).feature_extractor
+        self.encoder2D = build_module("2D", 'DinoV2', 
+                                 ckpt =  'dinov2_vitg14', device = self.device)
         
         self.encoder1D = blip_feature_extractor(pretrained='https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_large.pth', 
                                             image_size=224, vit='large').to(self.device)
@@ -93,15 +95,15 @@ class InstanceCrossOverModel(nn.Module):
                     obj_feat = self.point_feature_extractor(points_pt) 
                 
                 object_features.append(obj_feat.squeeze(0))
-                object_locations.append(object_loc)  
+                object_locations.append(object_loc)  # Use all 6 elements: [center_x, center_y, center_z, size_x, size_y, size_z]
             else:
                 object_features.append(torch.zeros(self.feat_dims[ModalityType.POINT]).to(self.device))
-                object_locations.append(np.zeros(3)) 
+                object_locations.append(np.zeros(6))  # Zero location with 6 elements 
         
         point_features = torch.stack(object_features).unsqueeze(0)  # (1, num_objects, feat_dim)
         
-        obj_locs = torch.from_numpy(np.stack(object_locations)).unsqueeze(0).to(self.device).float()  # (1, num_objects, 3)
-        encoded_features = self.modality_encoders[ModalityType.POINT](point_features, obj_locs, obj_masks.unsqueeze(0))
+        obj_locs = torch.from_numpy(np.stack(object_locations)).unsqueeze(0).to(self.device).float()  # (1, num_objects, 6)
+        encoded_features = self.modality_encoders[ModalityType.POINT](point_features, obj_locs, obj_masks)
         
         point_embeddings = self.modality_projections[ModalityType.POINT](encoded_features.view(-1, encoded_features.size(-1)))
         point_embeddings = point_embeddings.view(1, num_objects, -1) 
@@ -142,20 +144,20 @@ class InstanceCrossOverModel(nn.Module):
                         obj_feat = self.point_feature_extractor(points_pt)  # (1, feat_dim)
                     
                     object_features.append(obj_feat.squeeze(0))
-                    object_locations.append(object_loc)  # Store computed location
+                    object_locations.append(object_loc)  # Use all 6 elements: [center_x, center_y, center_z, size_x, size_y, size_z]
                 else:
                     # Empty CAD data
                     object_features.append(torch.zeros(self.feat_dims[ModalityType.CAD]).to(self.device))
-                    object_locations.append(np.zeros(3))  # Zero location for empty CAD
+                    object_locations.append(np.zeros(6))  # Zero location for empty CAD
             else:
                 object_features.append(torch.zeros(self.feat_dims[ModalityType.CAD]).to(self.device))
-                object_locations.append(np.zeros(3))  # Zero location for invalid objects
+                object_locations.append(np.zeros(6))  # Zero location for invalid objects
         
         cad_features = torch.stack(object_features).unsqueeze(0)  # (1, num_objects, feat_dim)
         
         # Apply modality encoder with computed object locations (like preprocessing)
-        obj_locs = torch.from_numpy(np.stack(object_locations)).unsqueeze(0).to(self.device).float()  # (1, num_objects, 3)
-        encoded_features = self.modality_encoders[ModalityType.CAD](cad_features, obj_locs, obj_masks.unsqueeze(0))
+        obj_locs = torch.from_numpy(np.stack(object_locations)).unsqueeze(0).to(self.device).float()  # (1, num_objects, 6)
+        encoded_features = self.modality_encoders[ModalityType.CAD](cad_features, obj_locs, obj_masks)
         
         cad_embeddings = self.modality_projections[ModalityType.CAD](encoded_features.view(-1, encoded_features.size(-1)))
         cad_embeddings = cad_embeddings.view(1, num_objects, -1)  # (1, num_objects, out_dim)
@@ -173,7 +175,7 @@ class InstanceCrossOverModel(nn.Module):
             
             with torch.no_grad():
                 
-                features = self.encoder2D(crops_tensor) 
+                features = self.encoder2D.feature_extractor(crops_tensor) 
                 cls_tokens = features[:, 0, :] 
                 
                 mean_features = cls_tokens.mean(dim=0)  
@@ -232,18 +234,32 @@ class InstanceCrossOverModel(nn.Module):
             
             # Point modality
             if 'point' in objects_inputs:
-                point_mask = masks.get('point', torch.ones(objects_inputs['point'].size(0), objects_inputs['point'].size(1))).to(self.device)
+                # objects_inputs['point'] is now a list of point clouds
+                if isinstance(objects_inputs['point'], list):
+                    num_objects = len(objects_inputs['point'])
+                    point_mask = masks.get('point', torch.ones(1, num_objects)).to(self.device)
+                else:
+                    # Legacy tensor format
+                    point_mask = masks.get('point', torch.ones(objects_inputs['point'].size(0), objects_inputs['point'].size(1))).to(self.device)
+                
                 embedding_dict['embeddings']['point'] = self.encode_point_objects(
-                    objects_inputs['point'].to(self.device),
+                    objects_inputs['point'],  # Pass directly (list or tensor)
                     point_mask
                 )
                 embedding_dict['masks']['point'] = point_mask
             
             # CAD modality
             if 'cad' in objects_inputs:
-                cad_mask = masks.get('cad', torch.ones(objects_inputs['cad'].size(0), objects_inputs['cad'].size(1))).to(self.device)
+                # objects_inputs['cad'] is now a list of CAD point clouds
+                if isinstance(objects_inputs['cad'], list):
+                    num_objects = len(objects_inputs['cad'])
+                    cad_mask = masks.get('cad', torch.ones(1, num_objects)).to(self.device)
+                else:
+                    # Legacy tensor format
+                    cad_mask = masks.get('cad', torch.ones(objects_inputs['cad'].size(0), objects_inputs['cad'].size(1))).to(self.device)
+                
                 embedding_dict['embeddings']['cad'] = self.encode_cad_objects(
-                    objects_inputs['cad'].to(self.device),
+                    objects_inputs['cad'],  # Pass directly (list or tensor)
                     cad_mask
                 )
                 embedding_dict['masks']['cad'] = cad_mask

@@ -44,7 +44,7 @@ File structure below:
 ```
 
 ## :wrench: Data Preprocessing
-In order to process data faster during training + inference, we preprocess 1D (referral), 2D (RGB + floorplan) & 3D (Point Cloud + CAD) for both object instances and scenes. Note that, since for 3RScan dataset, they do not provide frame-wise RGB segmentations, we project the 3D data to 2D and store it in `.pt` format for every scan. We provide the scripts for projection. Here's an overview which data features are precomputed:
+In order to process data faster during training + inference, we preprocess 1D (referral), 2D (RGB + floorplan) & 3D (Point Cloud + CAD) for both object instances and scenes. Note that, since for 3RScan dataset, they do not provide frame-wise RGB segmentations, we project the 3D data to 2D and store it in `.npz` format for every scan. We provide the scripts for projection. Here's an overview which data features are precomputed:
 
 - Object Instance: Referral, Multi-view RGB images, Point Cloud & CAD (only for ScanNet)
 - Scene: Referral, Multi-view RGB images, Floorplan (only for ScanNet) Point Cloud 
@@ -69,11 +69,11 @@ Scannet/
 |   └── val_objects.h5
 ├── scans/
 |   ├── scene0000_00/
-|   │   ├── data1D.pt -> all 1D data + encoded (object referrals + BLIP features) 
-|   │   ├── data2D.pt -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
-|   │   ├── data3D.pt -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
-|   │   ├── object_id_to_label_id_map.pt -> Instance ID to NYU40 Label mapped
-|   │   ├── objectsDataMultimodal.pt -> object data combined from data1D.pt + data2D.pt + data3D.pt (for easier loading)
+|   │   ├── data1D.npz -> all 1D data + encoded (object referrals + BLIP features) 
+|   │   ├── data2D.npz -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
+|   │   ├── data3D.npz -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
+|   │   ├── object_id_to_label_id_map.npz -> Instance ID to NYU40 Label mapped
+|   │   ├── objectsDataMultimodal.npz -> object data combined from data1D.npz + data2D.npz + data3D.npz (for easier loading)
 |   │   ├── sel_cams_on_mesh.png (visualisation of the cameras selected for computing RGB features per scan)
 |   │   ├── floor+obj.png -> rasterized floorplan (top-down projection of the floor+obj.ply)
 |   |   └── floor+obj.ply -> floorplan + CAD mesh
@@ -91,7 +91,7 @@ $ bash scripts/preprocess/process_scan3r.sh
 
 Our script for 3RScan dataset performs the following additional processing:
 
-- 3D-to-2D projection for 2D segmentation and stores as `gt-projection-seg.pt` for each scan.
+- 3D-to-2D projection for 2D segmentation and stores as `gt-projection-seg.npz` for each scan.
 
 Post running preprocessing, the data structure should look like the following:
 
@@ -102,13 +102,13 @@ Scan3R/
 |   └── val_objects.h5
 ├── scans/
 |   ├── 7f30f36c-42f9-27ed-87c6-23ceb65f1f9b/
-|   │   ├── gt-projection-seg.pt -> 3D-to-2D projected data  consisting of framewise 2D instance segmentation
-|   │   ├── data1D.pt -> all 1D data + encoded (object referrals + BLIP features) 
-|   │   ├── data2D.pt -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
-|   │   ├── data2D_all_images.pt (RGB features of every image of every scan -- for comparison with SceneGraphLoc)
-|   │   ├── data3D.pt -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
-|   │   ├── object_id_to_label_id_map.pt -> Instance ID to NYU40 Label mapped
-|   │   ├── objectsDataMultimodal.pt -> object data combined from data1D.pt + data2D.pt + data3D.pt (for easier loading)
+|   │   ├── gt-projection-seg.npz -> 3D-to-2D projected data  consisting of framewise 2D instance segmentation
+|   │   ├── data1D.npz -> all 1D data + encoded (object referrals + BLIP features) 
+|   │   ├── data2D.npz -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
+|   │   ├── data2D_all_images.npz (RGB features of every image of every scan -- for comparison with SceneGraphLoc)
+|   │   ├── data3D.npz -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
+|   │   ├── object_id_to_label_id_map.npz -> Instance ID to NYU40 Label mapped
+|   │   ├── objectsDataMultimodal.npz -> object data combined from data1D.npz + data2D.npz + data3D.npz (for easier loading)
 |   │   └── sel_cams_on_mesh.png (visualisation of the cameras selected for computing RGB features per scan)
 |   └── ...
 ```
@@ -124,7 +124,7 @@ $ bash scripts/preprocess/process_arkit.sh
 
 Our script for ARKitScenes dataset performs the following additional processing:
 
-- 3D-to-2D projection for 2D segmentation and stores as `gt-projection-seg.pt` for each scan.
+- 3D-to-2D projection for 2D segmentation and stores as `gt-projection-seg.npz` for each scan.
 
 Post running preprocessing, the data structure should look like the following:
 
@@ -135,13 +135,12 @@ ARKitScenes/
 |   └── val_objects.h5
 ├── scans/
 |   ├── 40753679/
-|   │   ├── gt-projection-seg.pt -> 3D-to-2D projected data  consisting of framewise 2D instance segmentation
-|   │   ├── data1D.pt -> all 1D data + encoded (object referrals + BLIP features) 
-|   │   ├── data2D.pt -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
-|   │   ├── data2D_all_images.pt (RGB features of every image of every scan )
-|   │   ├── data3D.pt -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
-|   │   ├── object_id_to_label_id_map.pt -> Instance ID to NYU40 Label mapped
-|   │   ├── objectsDataMultimodal.pt -> object data combined from data1D.pt + data2D.pt + data3D.pt (for easier loading)
+|   │   ├── gt-projection-seg.npz -> 3D-to-2D projected data  consisting of framewise 2D instance segmentation
+|   │   ├── data1D.npz -> all 1D data + encoded (object referrals + BLIP features) 
+|   │   ├── data2D.npz -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
+|   │   ├── data3D.npz -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
+|   │   ├── object_id_to_label_id_map.npz -> Instance ID to NYU40 Label mapped
+|   │   ├── objectsDataMultimodal.npz -> object data combined from data1D.npz + data2D.npz + data3D.npz (for easier loading)
 |   │   └── sel_cams_on_mesh.png (visualisation of the cameras selected for computing RGB features per scan)
 |   └── ...
 ```
@@ -157,7 +156,7 @@ $ bash scripts/preprocess/process_multiscan.sh
 
 Our script for MultiScan dataset performs the following additional processing:
 
-- 3D-to-2D projection for 2D segmentation and stores as `gt-projection-seg.pt` for each scan.
+- 3D-to-2D projection for 2D segmentation and stores as `gt-projection-seg.npz` for each scan.
 
 Post running preprocessing, the data structure should look like the following:
 
@@ -168,13 +167,12 @@ MultiScan/
 |   └── val_objects.h5
 ├── scans/
 |   ├── scene_00000_00/
-|   │   ├── gt-projection-seg.pt -> 3D-to-2D projected data  consisting of framewise 2D instance segmentation
-|   │   ├── data1D.pt -> all 1D data + encoded (object referrals + BLIP features) 
-|   │   ├── data2D.pt -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
-|   │   ├── data2D_all_images.pt (RGB features of every image of every scan)
-|   │   ├── data3D.pt -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
-|   │   ├── object_id_to_label_id_map.pt -> Instance ID to NYU40 Label mapped
-|   │   ├── objectsDataMultimodal.pt -> object data combined from data1D.pt + data2D.pt + data3D.pt (for easier loading)
+|   │   ├── gt-projection-seg.npz -> 3D-to-2D projected data  consisting of framewise 2D instance segmentation
+|   │   ├── data1D.npz -> all 1D data + encoded (object referrals + BLIP features) 
+|   │   ├── data2D.npz -> all 2D data + encoded (RGB + floorplan + DinoV2 features)
+|   │   ├── data3D.npz -> all 3D data + encoded (Point Cloud + I2PMAE features - object only)
+|   │   ├── object_id_to_label_id_map.npz -> Instance ID to NYU40 Label mapped
+|   │   ├── objectsDataMultimodal.npz -> object data combined from data1D.npz + data2D.npz + data3D.npz (for easier loading)
 |   │   └── sel_cams_on_mesh.png (visualisation of the cameras selected for computing RGB features per scan)
 |   └── ...
 ```

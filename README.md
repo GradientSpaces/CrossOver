@@ -128,9 +128,12 @@ See [DATA.MD](DATA.md) for detailed instructions on data download, preparation a
 | ARKitScenes       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
 | MultiScan       | `[point, rgb, referral]`      | `[point, rgb, referral]`            |    ❌                       |          ✅                |
 
-> To run our demo, you only need to download generated embedding data; no need for any data preprocessing.
+> To run our scene retrieval demo, you only need to download generated embedding data; no need for any data preprocessing. Running the instance retrieval demo for 3RScan, MultiScan and ARKitScenes requires generating 'gt-projection-seg.npz', containing framewise 2D instance segmentation, as described in our dataset preprocessing instructions.
 
 # :film_projector: Demo
+
+## Scene Retrieval Demo
+
 This demo script allows users to process a custom scene and retrieve the closest match from the supported datasets using different modalities. Detailed usage can be found inside the script. Example usage below:
 
 ```bash
@@ -148,6 +151,28 @@ Various configurable parameters:
 For embedding and pre-trained model download, refer to [generated embedding data](DATA.md#generated-embedding-data) and [checkpoints](#checkpoints) sections.
 
 > We also provide scripts for inference on a single scan of the supported datasets. Details in **Single Inference** section in [TRAIN.md](TRAIN.md).
+
+## Instance Retrieval Demo
+
+This demo script allows users to process a custom object and run cross-modal retrieval to find the closest matched object within a target scene . Detailed usage can be found inside the script. Example usage below:
+
+```bash
+$ python demo/demo_instance_retrieval.py
+```
+
+Various configurable parameters:
+
+- `--query_path`: Path to query object(point cloud, image, or text) 
+- `--query_modality`: Query modality - Options: `point`, `rgb`, `referral` 
+- `--scan_id`: Scene ID to search in 
+- `--target_modality`: Target modality to match against - Options: `point`, `rgb`, `referral`, `cad` 
+- `--dataset`: Dataset name - Options: `scannet`, `scan3r`, `arkitscenes`, `multiscan` 
+- `--data_dir`: Path to dataset directory - default: `/drive/datasets/Scannet`
+- `--process_dir`: Path to preprocessed features directory (for gt-projection-seg.npz)
+- `--ckpt`: Path to model checkpoint 
+- `--top_k`: Number of top results to return - default: `5`
+
+
 
 # :weight_lifting: Training and Inference 
 
@@ -180,7 +205,7 @@ We provide all available checkpoints on huggingface 👉 [here](https://huggingf
 
 ## 🚧 TODO List
 - [x] Release evaluation on temporal instance matching
-- [ ] Release inference on single scan cross-modal object retrieval
+- [x] Release inference on single scan cross-modal object retrieval
 
 ## 📧 Contact
 If you have any questions regarding this project, please use the github issue tracker or contact Sayan Deb Sarkar (sdsarkar@stanford.edu).

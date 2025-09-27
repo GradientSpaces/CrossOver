@@ -4,16 +4,14 @@ import numpy as np
 import torch
 import imageio
 import skimage.transform as sktf
-from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms as tvf
-from scipy.spatial.transform import Rotation as R
 from typing import List, Dict
-
+from util.image import mask2box_multi_level
 from util import scannet
 from common import load_utils
 
-class ScannetSingleScanDataset:
+class ScannetInstanceInference:
     """Dataset class that loads instance-level data for one specific Scannet scan"""
     
     def __init__(self, data_dir, scan_id, image_size=[224, 224], max_objects=150, 
@@ -29,31 +27,24 @@ class ScannetSingleScanDataset:
         
         self.orig_image_size = (968, 1296)  # ScanNet original image size
         self.model_image_size = tuple(image_size)
-        self.top_k = 5  # Top-K frames per object
+        self.top_k = 15  # Top-K frames per object
         self.num_levels = 3  # Multi-level cropping levels
         self.undefined = 0  # Undefined object ID
         
         self.scans_dir = osp.join(data_dir, 'scans')
         self.files_dir = osp.join(data_dir, 'files')
         
-        # Load referrals and objects
         referral_path = osp.join(self.files_dir, 'sceneverse/ssg_ref_rel2_template.json')
         self.referrals = []
         if osp.exists(referral_path):
             self.referrals = load_utils.load_json(referral_path)
         
-        objects_path = osp.join(self.files_dir, 'objects.json')
-        self.objects = load_utils.load_json(objects_path)['scans']
-        
-        # Load label map
         self.label_map = scannet.read_label_map(self.files_dir, label_from='raw_category', label_to='nyu40id')
         
-        # Load CAD annotations if available
         cad_path = osp.join(self.files_dir, 'scan2cad_full_annotations.json')
         self.cad_annotations = []
         self.cad_annotations = load_utils.load_json(cad_path)
         
-        # CAD shape directory (same as 3D preprocessing)
         self.shape_dir = shape_dir
         
         self.base_tf = tvf.Compose([
@@ -62,7 +53,6 @@ class ScannetSingleScanDataset:
                           std=[0.229, 0.224, 0.225])
         ])
         
-        # Image transform for RGB processing
         self.image_transform = self.base_tf
         
     
@@ -85,7 +75,6 @@ class ScannetSingleScanDataset:
         
         mesh_points = mesh_vertices[:, 0:3] 
         
-        # Load CAD data if available (same as 3D preprocessing)
         cad_data = {}
         shape_annot = [cad_annot for cad_annot in self.cad_annotations if cad_annot['id_scan'] == self.scan_id]
         if len(shape_annot) > 0:
@@ -109,7 +98,6 @@ class ScannetSingleScanDataset:
             if instance_id == self.undefined or instance_id not in object_id_to_label_id:
                 continue
             
-            # Get points belonging to this object
             object_mask = instance_ids == instance_id
             object_points = mesh_points[object_mask]
             
@@ -145,7 +133,6 @@ class ScannetSingleScanDataset:
             if not os.path.exists(instance_file):
                 continue
                 
-            # Load and resize instance segmentation exactly like preprocessing
             image = np.array(imageio.imread(instance_file))
             image = sktf.resize(image, self.orig_image_size, order=0, preserve_range=True)
             
@@ -184,7 +171,6 @@ class ScannetSingleScanDataset:
                 color_img = Image.open(color_file)
                 object_anno = object_anno_2d[frame_idx]
                 
-                # Multi-level cropping exactly like preprocessing
                 frame_crops = self.computeImageFeaturesEachObject(color_img, object_id, object_anno)
                 object_image_crops.extend(frame_crops)
             
@@ -195,7 +181,6 @@ class ScannetSingleScanDataset:
     def computeImageFeaturesEachObject(self, image: Image.Image, object_id: int, 
                                      object_anno_2d: np.ndarray) -> List[torch.Tensor]:
         """Multi-level object cropping exactly like preprocess/feat2D/scannet.py"""
-        from util.image import mask2box_multi_level
         
         object_mask = object_anno_2d == object_id
         
@@ -215,7 +200,6 @@ class ScannetSingleScanDataset:
         """Get referral texts for objects"""
         object_referrals = {}
         
-        # Get referrals for this scan
         scan_referrals = [ref for ref in self.referrals if ref['scan_id'] == self.scan_id]
         
         for obj_id in object_ids:
@@ -226,16 +210,12 @@ class ScannetSingleScanDataset:
     
     def get_data(self):
         """Return the instance-level data dict for the single scan"""
-        # Load raw scan data
         mesh_points, instance_ids, object_id_to_label_id, cad_data = self.load_scan_data()
-        
-        
         object_point_clouds = self.extract_object_point_clouds(mesh_points, instance_ids, object_id_to_label_id)
         
         object_ids = list(object_point_clouds.keys())[:self.max_objects]
         num_objects = len(object_ids)
         
-        # Prepare object data
         objects_dict = {'inputs': {}, 'object_locs': {}}
         masks = {}
         
@@ -250,10 +230,8 @@ class ScannetSingleScanDataset:
         objects_dict['inputs']['point'] = torch.from_numpy(point_coords).float()
         masks['point'] = torch.from_numpy(point_masks).bool()
         
-        # RGB data - extract object-specific image crops
         object_images_dict = self.extract_object_images(object_ids)
         
-        # Process RGB data for each object
         max_views = max([len(imgs) for imgs in object_images_dict.values()]) if object_images_dict else 1
         max_views = max(max_views, 1)  # Ensure at least 1 view
         
@@ -276,7 +254,6 @@ class ScannetSingleScanDataset:
         objects_dict['inputs']['rgb'] = rgb_data
         masks['rgb'] = rgb_masks
         
-        # CAD data - add CAD point clouds if available
         if cad_data:
             cad_coords = np.zeros((1, num_objects, self.max_points_per_object, 3))
             cad_masks = np.zeros((1, num_objects))
@@ -299,23 +276,21 @@ class ScannetSingleScanDataset:
             objects_dict['inputs']['cad'] = torch.from_numpy(cad_coords).float()
             masks['cad'] = torch.from_numpy(cad_masks).bool()
         
-        # Referral data - keep all referrals per object like feat1D preprocessing
         object_referrals = self.get_object_referrals(object_ids)
         batch_referral_texts = []
         referral_masks = np.zeros((1, len(object_ids)), dtype=bool)  # [batch, objects]
         
         for i, obj_id in enumerate(object_ids):
             obj_referrals = object_referrals.get(obj_id, [''])
-            # Keep all valid referrals for this object (filter out empty strings)
             valid_referrals = [ref for ref in obj_referrals if ref.strip()]
             if valid_referrals:
-                batch_referral_texts.append(valid_referrals)  # Keep all referrals
+                batch_referral_texts.append(valid_referrals)  
                 referral_masks[0, i] = True
             else:
-                batch_referral_texts.append([''])  # Empty list with one empty string
+                batch_referral_texts.append(['']) 
                 referral_masks[0, i] = False
         
-        referral_texts = [batch_referral_texts]  # [batch][objects][referrals_per_object]
+        referral_texts = [batch_referral_texts]  
         masks['referral'] = torch.from_numpy(referral_masks).bool()
         
         return {
@@ -325,4 +300,3 @@ class ScannetSingleScanDataset:
             'referral_texts': referral_texts,
             'object_ids': object_ids
         }
-    

@@ -11,7 +11,8 @@ import open3d as o3d
 import logging as log
 from PIL import Image
 from torchvision import transforms as tvf
-
+from common.load_utils import load_yaml
+import albumentations as A
 import sys
 sys.path.append(osp.abspath('.'))
 from model.scene_crossover import SceneCrossOverModel
@@ -22,7 +23,7 @@ log.basicConfig(level=log.INFO,
                 format='%(asctime)s - %(levelname)s - %(message)s',
                 datefmt='%Y-%m-%d %H:%M:%S')
 
-def load_data_and_get_embed(model, path, query_modality, voxel_size=0.02, image_size=[224, 224]):
+def load_data_and_get_embed(model, path, color_stats_path, query_modality, voxel_size=0.02, image_size=[224, 224]):
     base_tf = tvf.Compose([
         tvf.ToTensor(),
         tvf.Normalize(mean=[0.485, 0.456, 0.406], 
@@ -30,11 +31,21 @@ def load_data_and_get_embed(model, path, query_modality, voxel_size=0.02, image_
     ])
     
     if query_modality == 'point':
+        color_mean_std_path = osp.join(color_stats_path, 'color_mean_std.yaml')
+        color_mean_std = load_yaml(color_mean_std_path)
+        color_mean, color_std = (
+            tuple(color_mean_std["mean"]),
+            tuple(color_mean_std["std"]),
+        )
+        normalize_color = A.Normalize(mean=color_mean, std=color_std)
         assert path.endswith('.ply'), 'Point Cloud Path should be a .ply file!'
         pcd = o3d.io.read_point_cloud(path) 
         points = np.asarray(pcd.points)
-        feats = np.asarray(pcd.colors)
-        feats -= 0.5
+        feats = np.asarray(pcd.colors)*255.0
+        feats = feats.round()
+        pseudo_image = feats.astype(np.uint8)[np.newaxis, :, :]
+        feats = np.squeeze(normalize_color(image=pseudo_image)["image"])
+        # feats -= 0.5
         
         coords, feats = torch_util.convert_to_sparse_tensor(points, feats, voxel_size)
         with torch.no_grad():
@@ -119,7 +130,7 @@ if __name__ == '__main__':
     parser.add_argument('--database_path', default='/drive/dumps/multimodal-spaces/release_data/embed_scannet.pt', type=str, required=False)
     parser.add_argument('--query_modality', default='point', type=str, required=False)
     parser.add_argument('--database_modality', default='referral', type=str, required=False)
-    
+    parser.add_argument('--database_stats_path', default='/drive/dumps/multimodal-spaces/preprocess_feats/Scannet', type=str, required=False)
     parser.add_argument('--ckpt', default='/drive/dumps/multimodal-spaces/runs/release_runs/scene_crossover_scannet+scan3r.pth/', type=str, required=False)
     parser.add_argument('--input_dim_3d', default=512, type=int, required=False)
     parser.add_argument('--input_dim_2d', default=1536, type=int, required=False)

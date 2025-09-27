@@ -20,10 +20,10 @@ from util import torch_util
 from omegaconf import DictConfig
 
 # Import single-scan datasets
-from single_inference.datasets.scannet_single_scan import ScannetSingleScanDataset
-from single_inference.datasets.scan3r_single_scan import Scan3RSingleScanDataset
-from single_inference.datasets.arkitscenes_single_scan import ARKitScenesSingleScanDataset
-from single_inference.datasets.multiscan_single_scan import MultiScanSingleScanDataset
+from single_inference.datasets.scannet_instance import ScannetInstanceInference
+from single_inference.datasets.scan3r_instance import Scan3RInstanceInference
+from single_inference.datasets.arkitscenes_instance import ARKitScenesInstanceInference
+from single_inference.datasets.multiscan_instance import MultiScanInstanceInference
 
 DEFAULT_CONFIG = {
     'dataset': 'arkitscenes',  # scannet, scan3r, arkitscenes, multiscan
@@ -82,13 +82,13 @@ class InstanceRetrieval:
     def setup_dataset(self, scan_id):
         """Setup single-scan dataset based on the dataset type"""
         if self.args.dataset == 'scannet':
-            self.dataset = ScannetSingleScanDataset(self.args.data_dir, scan_id, shape_dir='/drive/datasets/Shapenet/ShapeNetCore.v2/')
+            self.dataset = ScannetInstanceInference(self.args.data_dir, scan_id, shape_dir='/drive/datasets/Shapenet/ShapeNetCore.v2/')
         elif self.args.dataset == 'scan3r':
-            self.dataset = Scan3RSingleScanDataset(self.args.data_dir, self.args.process_dir, scan_id)
+            self.dataset = Scan3RInstanceInference(self.args.data_dir, self.args.process_dir, scan_id)
         elif self.args.dataset == 'arkitscenes':
-            self.dataset = ARKitScenesSingleScanDataset(self.args.data_dir, self.args.process_dir, scan_id)
+            self.dataset = ARKitScenesInstanceInference(self.args.data_dir, self.args.process_dir, scan_id)
         elif self.args.dataset == 'multiscan':
-            self.dataset = MultiScanSingleScanDataset(self.args.data_dir, self.args.process_dir, scan_id)
+            self.dataset = MultiScanInstanceInference(self.args.data_dir, self.args.process_dir, scan_id)
         else:
             raise ValueError(f"Unknown dataset: {self.args.dataset}")
     

@@ -11,16 +11,20 @@ import open3d as o3d
 from common import load_utils
 from util import scan3r
 from util import image as image_util
+from common.load_utils import load_yaml
+import albumentations as A
+import trimesh
 
 class Scan3RInferDataset(Dataset):
-    def __init__(self, data_dir, voxel_size=0.02, frame_skip=1, image_size=[224, 224]) -> None:
+    def __init__(self, data_dir, process_dir, voxel_size=0.02, frame_skip=1, image_size=[224, 224]) -> None:
         self.voxel_size = voxel_size
         self.frame_skip = frame_skip
         self.image_size = image_size
-        
+        self.data_dir = data_dir
         self.scans_dir = osp.join(data_dir, 'scans')
         self.files_dir = osp.join(data_dir, 'files')
         self.referrals = load_utils.load_json(osp.join(self.files_dir, 'sceneverse/ssg_ref_rel2_template.json'))
+        self.process_dir = process_dir
         
         self.scan_ids = []
         for split in ['train', 'val']:
@@ -32,6 +36,13 @@ class Scan3RInferDataset(Dataset):
             tvf.Normalize(mean=[0.485, 0.456, 0.406], 
                           std=[0.229, 0.224, 0.225])
         ])
+        self.color_mean_std_path = osp.join(self.process_dir, 'color_mean_std.yaml')
+        self.color_mean_std = load_yaml(self.color_mean_std_path)
+        color_mean, color_std = (
+            tuple(self.color_mean_std["mean"]),
+            tuple(self.color_mean_std["std"]),
+        )
+        self.normalize_color = A.Normalize(mean=color_mean, std=color_std)
     
     def extract_images(self, scan_id, color_path):
         frame_idxs = scan3r.load_frame_idxs(osp.join(self.scans_dir, scan_id))
@@ -71,13 +82,25 @@ class Scan3RInferDataset(Dataset):
         data_dict['masks'] = {}
         
         # Point Cloud
-        mesh = o3d.io.read_triangle_mesh(osp.join(scan_folder, 'labels.instances.align.annotated.v2.ply'))
-        points = np.asarray(mesh.vertices)
-        feats  = np.asarray(mesh.vertex_colors)*255.0
-        feats = feats.round()
+        # mesh = o3d.io.read_triangle_mesh(osp.join(scan_folder, 'labels.instances.align.annotated.v2.ply'))
+        # points = np.asarray(mesh.vertices)
+        # feats  = np.asarray(mesh.vertex_colors)*255.0
+        # feats = feats.round()
         
-        feats /= 255.
-        feats -= 0.5
+        mesh = trimesh.load(osp.join(self.scans_dir, scan_id, 'mesh.refined.v2.obj'))
+    
+        points = np.asarray(mesh.vertices)
+        feats = mesh.visual.to_color().vertex_colors[:,:3]
+    
+        # ply_data = scan3r.load_ply_data(osp.join(self.data_dir, 'scans'), scan_id, self.label_filename)
+        # points = np.stack([ply_data['x'], ply_data['y'], ply_data['z']]).transpose((1, 0))
+        # feats = np.stack([ply_data['red'], ply_data['green'], ply_data['blue']]).transpose((1, 0))
+        
+        pseudo_image = feats.astype(np.uint8)[np.newaxis, :, :]
+        feats = np.squeeze(self.normalize_color(image=pseudo_image)["image"])
+        
+        # feats /= 255.
+        # feats -= 0.5
         
         _, sel = ME.utils.sparse_quantize(points / self.voxel_size, return_index=True)
         coords,  feats = points[sel], feats[sel]

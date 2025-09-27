@@ -11,13 +11,16 @@ import pandas as pd
 from common import load_utils
 from util import arkit
 from util import image as image_util
+from common.load_utils import load_yaml
+import albumentations as A
 
 class ARKitScenesInferDataset(Dataset):
-    def __init__(self, data_dir,voxel_size=0.02, frame_skip=5, image_size=[224, 224]) -> None:
+    def __init__(self, data_dir, process_dir, voxel_size=0.02, frame_skip=5, image_size=[224, 224]) -> None:
         self.voxel_size = voxel_size
         self.frame_skip = frame_skip
         self.image_size = image_size
         
+        self.process_dir = process_dir
         self.scans_dir = osp.join(data_dir, 'scans')
         self.files_dir = osp.join(data_dir, 'files')
         self.referrals = load_utils.load_json(osp.join(self.files_dir, 'sceneverse/ssg_ref_rel2_template.json'))
@@ -32,8 +35,14 @@ class ARKitScenesInferDataset(Dataset):
             tvf.Normalize(mean=[0.485, 0.456, 0.406], 
                           std=[0.229, 0.224, 0.225])
         ])
-        self.metadata = pd.read_csv(osp.join(self.files_dir,'metadata.csv'))
         
+        self.color_mean_std_path = osp.join(self.process_dir, 'color_mean_std.yaml')
+        self.color_mean_std = load_yaml(self.color_mean_std_path)
+        color_mean, color_std = (
+            tuple(self.color_mean_std["mean"]),
+            tuple(self.color_mean_std["std"]),
+        )
+        self.normalize_color = A.Normalize(mean=color_mean, std=color_std)
     
     def extract_images(self, scan_id, color_path):
         pose_data = arkit.load_poses(self.scans_dir, scan_id, skip=self.frame_skip)      
@@ -48,16 +57,11 @@ class ARKitScenesInferDataset(Dataset):
             
         pose_data_arr = np.array(pose_data_arr)
         sampled_frame_idxs = image_util.sample_camera_pos_on_grid(pose_data_arr)
-        # sky_direction=self.metadata[self.metadata['video_id']==int(scan_id)]['sky_direction'].values[0]
-        
+
         image_data = None
         for idx in sampled_frame_idxs:
             frame_index = frame_idxs[idx]
             image = Image.open(osp.join(color_path, f'{scan_id}_{frame_index}.png'))
-            # if sky_direction=='Left':
-            #     image = image.transpose(Image.ROTATE_270)
-            # elif sky_direction=='Right':
-            #     image = image.transpose(Image.ROTATE_90)
             image = image.resize((self.image_size[1], self.image_size[0]), Image.BICUBIC)
             image_pt = self.base_tf(image).unsqueeze(0)
             image_data = image_pt if image_data is None else torch.cat((image_data, image_pt), dim=0)
@@ -80,9 +84,10 @@ class ARKitScenesInferDataset(Dataset):
         points = np.asarray(mesh.vertices)
         feats  = np.asarray(mesh.vertex_colors)*255.0
         feats = feats.round()
-        
-        feats /= 255.
-        feats -= 0.5
+        pseudo_image = feats.astype(np.uint8)[np.newaxis, :, :]
+        feats = np.squeeze(self.normalize_color(image=pseudo_image)["image"])
+        # feats /= 255.
+        # feats -= 0.5
         
         _, sel = ME.utils.sparse_quantize(points / self.voxel_size, return_index=True)
         coords,  feats = points[sel], feats[sel]

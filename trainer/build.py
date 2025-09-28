@@ -122,6 +122,7 @@ class BaseTrainer():
         if self.grad_norm is not None and self.accelerator.sync_gradients:
             self.accelerator.clip_grad_norm_(self.model.parameters(), 1.0)
         self.optimizer.step()
+        self.scheduler.step()
     
     def log(self, results: Dict[str, Any], mode: str = "train") -> None:
         """Log training metrics and learning rates."""

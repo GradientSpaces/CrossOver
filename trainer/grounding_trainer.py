@@ -37,8 +37,6 @@ class GroundingTrainer(BaseTrainer):
                 
                 pbar.update(1)
         
-        self.scheduler.step()
-        
     @torch.no_grad()
     def eval_step(self, epoch: int) -> bool:
         self.model.eval()

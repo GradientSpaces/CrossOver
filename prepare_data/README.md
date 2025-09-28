@@ -119,7 +119,7 @@ Scan3R/
 1. Download ARKitScenes 3dod data using the following command:
 
 ```bash
-python ARKitScenes/download_data.py 3dod --video_id_csv PATH_TO_3dod_train_val_splits.csv --download_dir PATH_TO_ARKITSCENES
+python download_data.py 3dod --video_id_csv PATH_TO_3dod_train_val_splits.csv --download_dir PATH_TO_ARKITSCENES
 ```
 The files mentioned in the above command - ```download_data.py``` and ```3dod_train_val_splits.csv``` can be found in the official repository [here](https://github.com/apple/ARKitScenes), along with more detailed instructions and descriptions of the data.
 
@@ -157,14 +157,14 @@ ARKitScenes/
 ```
 
 #### MultiScan
-1. Download MultiScan data into MultiScan/scenes and run the following to extract MultiScan data 
+1. Download MultiScan data into MultiScan/scenes and run the following to extract MultiScan data.
  
  ```bash
 cd MultiScan/scenes
 unzip '*.zip'
 rm -rf '*.zip'
 ```
-3. To generate sequence of RGB images and corresponding camera poses from the ```.mp4``` file, run the follwing
+3. To generate sequence of RGB images and corresponding camera poses from the ```.mp4``` file, run the following:
 ```bash
 cd prepare_data/multiscan
 python preprocess_2d_multiscan.py --base_dir PATH_TO_MULTISCAN --frame_interval {frame_interval}

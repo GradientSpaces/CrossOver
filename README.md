@@ -68,7 +68,6 @@ assume complete data availability across all modalities. We present **CrossOver*
 
 
 # :newspaper: News
-<!-- > 📡 Stay tuned for stronger checkpoint release trained on many more datasets! -->
 - ![](https://img.shields.io/badge/New!-8A2BE2) **Version 1.0** - **CrossOver is now stronger than ever**. We recommend updating to this version; changes include:
   - More powerful pre-trained checkpoints; now available on Huggingface 👉 [here](https://huggingface.co/gradient-spaces/CrossOver/tree/main).
   - Support for 2 additional datasets - ARKitScenes & MultiScan
@@ -132,26 +131,6 @@ See [DATA.MD](DATA.md) for detailed instructions on data download, preparation a
 
 # :film_projector: Demo
 
-## Scene Retrieval Demo
-
-This demo script allows users to process a custom scene and retrieve the closest match from the supported datasets using different modalities. Detailed usage can be found inside the script. Example usage below:
-
-```bash
-$ python demo/demo_scene_retrieval.py
-```
-
-Various configurable parameters:
-
-- `--query_path`: Path to the query scene file (eg: `./example_data/dining_room/scene_cropped.ply`).
-- `--database_path`: Path to the precomputed embeddings of the database scenes downloaded before (eg: `./release_data/embed_scannet.pt`).
-- `--query_modality`: Modality of the query scene, Options: `point`, `rgb`, `floorplan`, `referral`
-- `--database_modality`: Modality used for retrieval. Same options as above.
-- `--ckpt`: Path to the pre-trained scene crossover model checkpoint (details [here](#checkpoints)), example_path: `./checkpoints/scene_crossover_scannet+scan3r.pth/`).
-
-For embedding and pre-trained model download, refer to [generated embedding data](DATA.md#generated-embedding-data) and [checkpoints](#checkpoints) sections.
-
-> We also provide scripts for inference on a single scan of the supported datasets. Details in **Single Inference** section in [TRAIN.md](TRAIN.md).
-
 ## Instance Retrieval Demo
 
 This demo script allows users to process a custom object and run cross-modal retrieval to find the closest matched object within a target scene . Detailed usage can be found inside the script. Example usage below:
@@ -172,6 +151,27 @@ Various configurable parameters:
 - `--ckpt`: Path to model checkpoint 
 - `--top_k`: Number of top results to return - default: `5`
 
+
+## Scene Retrieval Demo
+
+This demo script allows users to process a custom scene and retrieve the closest match from the supported datasets using different modalities. Detailed usage can be found inside the script. Example usage below:
+
+```bash
+$ python demo/demo_scene_retrieval.py
+```
+
+Various configurable parameters:
+
+- `--query_path`: Path to the query scene file (eg: `./example_data/dining_room/scene_cropped.ply`).
+- `--database_path`: Path to the precomputed embeddings of the database scenes downloaded before (eg: `./release_data/embed_scannet.pt`).
+- `--query_modality`: Modality of the query scene, Options: `point`, `rgb`, `floorplan`, `referral`
+- `--database_modality`: Modality used for retrieval. Same options as above.
+- `--ckpt`: Path to the pre-trained scene crossover model checkpoint (details [here](#checkpoints)), example_path: `./checkpoints/scene_crossover_scannet+scan3r.pth/`).
+
+For embedding and pre-trained model download, refer to [generated embedding data](DATA.md#generated-embedding-data) and [checkpoints](#checkpoints) sections.
+
+> [!TIP]
+> We also provide scripts for inference on a single scan of the supported datasets. Details in **Single Inference** section in [TRAIN.md](TRAIN.md).
 
 
 # :weight_lifting: Training and Inference 
@@ -194,13 +194,13 @@ We provide all available checkpoints on huggingface 👉 [here](https://huggingf
 |Instance CrossOver trained on 3RScan        | [3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scan3r.pth) |
 |Instance CrossOver trained on ScanNet        | [ScanNet](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet.pth) |
 |Instance CrossOver trained on ScanNet + 3RScan        | [ScanNet+3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet%2Bscan3r.pth) |
-|Instance CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan]() |
+|Instance CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet%2Bscan3r%2Bmultiscan%2Barkitscenes.pth) |
 
 ##### ```scene_crossover```
 | Description            | Checkpoint Link |
 | ------------------ | -------------- |
 | Unified CrossOver trained on ScanNet + 3RScan        | [ScanNet+3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/scene_crossover_scannet%2Bscan3r.pth) |
-| Unified CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan]() |
+| Unified CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/scene_crossover_scannet%2Bscan3r%2Bmultiscan%2Barkitscenes.pth) |
 
 
 ## 🚧 TODO List

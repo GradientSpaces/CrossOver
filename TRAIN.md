@@ -45,13 +45,13 @@ We provide all available checkpoints on huggingface 👉 [here](https://huggingf
 |Instance CrossOver trained on 3RScan        | [3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scan3r.pth) |
 |Instance CrossOver trained on ScanNet        | [ScanNet](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet.pth) |
 |Instance CrossOver trained on ScanNet + 3RScan        | [ScanNet+3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet%2Bscan3r.pth) |
-|Instance CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan]() |
+|Instance CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/instance_crossover_scannet%2Bscan3r%2Bmultiscan%2Barkitscenes.pth) |
 
 ##### ```scene_crossover```
 | Description            | Checkpoint Link |
 | ------------------ | -------------- |
 | Unified CrossOver trained on ScanNet + 3RScan        | [ScanNet+3RScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/scene_crossover_scannet%2Bscan3r.pth) |
-| Unified CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan       | [ScanNet+3RScan+ARKitScenes+MultiScan]() |
+| Unified CrossOver trained on ScanNet + 3RScan + ARKitScenes + MultiScan        | [ScanNet+3RScan+ARKitScenes+MultiScan](https://huggingface.co/gradient-spaces/CrossOver/tree/main/scene_crossover_scannet%2Bscan3r%2Bmultiscan%2Barkitscenes.pth) |
 
 
 # :shield: Single Inference

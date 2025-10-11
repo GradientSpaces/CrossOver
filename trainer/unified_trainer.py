@@ -55,12 +55,12 @@ class UnifiedTrainer(BaseTrainer):
                 loss, loss_dict = self.loss(data_dict)
                 # calculate evaluator
                 metrics = self.evaluator['train'].batch_metrics(data_dict)
-                if self.freeze_object_enc:
-                    self.backward(loss)
-                else:
-                    self.backward(loss_dict['scene_loss'])
-                    self.backward(loss_dict['instance_loss'])
-                
+                # if self.freeze_object_enc:
+                #     self.backward(loss)
+                # else:
+                #     self.backward(loss_dict['scene_loss'])
+                #     self.backward(loss_dict['instance_loss'])
+                self.backward(loss)
                 self.global_step += 1
                 
                 log_dict = {'step': self.global_step}

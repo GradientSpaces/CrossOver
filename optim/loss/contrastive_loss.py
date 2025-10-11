@@ -16,6 +16,7 @@ class RetrievalLoss(nn.Module):
         self.logit_scale = nn.Parameter((torch.ones([]) * np.log(1 / 0.07)).exp())  
         self.freeze_object_enc = freeze_object_encoders
         if not self.freeze_object_enc:
+            print("Joint opitimization of object and scene encoders")
             self.instance_loss = SceneWiseContrastiveLoss(base_modality='rgb')
             
     def calculate_loss(self, src_embed: torch.tensor, ref_embed: torch.tensor, mask: torch.tensor=None) -> torch.tensor:
